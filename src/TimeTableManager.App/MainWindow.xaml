@@ -1,0 +1,152 @@
+<Window x:Class="TimeTableManager.App.MainWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Style="{StaticResource {x:Type Window}}" Icon="pack://application:,,,/Assets/TimeTableManager4.ico" Title="{Binding Title}" Width="1440" Height="900" MinWidth="980" MinHeight="650" WindowState="Maximized"
+ PreviewKeyDown="OnKeyDown" Closing="OnClosing">
+ <Window.Resources>
+  <Style TargetType="Button" BasedOn="{StaticResource AquaButton}"><Setter Property="Padding" Value="8,1"/><Setter Property="Margin" Value="0,1,4,1"/><Setter Property="MinHeight" Value="24"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
+  <Style TargetType="ComboBox" BasedOn="{StaticResource AquaComboBox}"><Setter Property="MinHeight" Value="25"/><Setter Property="Margin" Value="0,1,6,1"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
+  <Style TargetType="TextBox" BasedOn="{StaticResource AquaTextBox}"><Setter Property="Padding" Value="4,1"/><Setter Property="FontSize" Value="12"/><Setter Property="MinHeight" Value="25"/><Setter Property="Margin" Value="0,1,6,1"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
+  <Style TargetType="DatePicker"><Setter Property="Height" Value="30"/><Setter Property="Margin" Value="0"/><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+ </Window.Resources>
+ <DockPanel Margin="8">
+  <Border DockPanel.Dock="Top" Background="{StaticResource AquaGlass}" BorderBrush="{StaticResource AquaEdge}" BorderThickness="1" CornerRadius="10" Padding="7,4,7,3" Margin="0,0,0,5">
+  <StackPanel>
+   <Grid Margin="0,0,0,5">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <WrapPanel x:Name="ColorLegend" Grid.Column="1" Margin="12,0,2,0" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+    <StackPanel Orientation="Horizontal">
+    <Menu x:Name="FileTools" VerticalAlignment="Center" Background="Transparent">
+     <MenuItem Header="파일">
+      <MenuItem Header="시간표 파일 열기…" Click="OpenClick" InputGestureText="Ctrl+O" ToolTip="Excel·CSV는 기초 시간표, .ttm은 저장한 작업을 이어서 엽니다."/>
+      <MenuItem Header="관리 월 선택·변경…" Click="MonthClick"/>
+      <MenuItem Header="작업 저장" Click="SaveClick" InputGestureText="Ctrl+S"/>
+      <MenuItem Header="다른 이름으로 작업 저장…" Click="SaveAsClick"/>
+      <Separator/><MenuItem Header="배정 결과 Excel·CSV 내보내기…" Click="ExportClick"/>
+      <MenuItem Header="자동 복구본 열기…" Click="RecoveryClick"/>
+     </MenuItem>
+     <MenuItem Header="편집">
+      <MenuItem Header="기초 요일 시간표 적용…" Click="DayTemplateClick"/>
+      <MenuItem Header="되돌리기" Click="UndoClick" InputGestureText="Ctrl+Z" IsEnabled="{Binding CanUndo}"/>
+      <MenuItem Header="다시 실행" Click="RedoClick" InputGestureText="Ctrl+Y" IsEnabled="{Binding CanRedo}"/>
+      <MenuItem Header="변경 내역 종합 다이어그램…" Click="SummaryClick"/>
+      <MenuItem Header="작업별 변경 내역…" Click="HistoryClick"/>
+      <Separator/><MenuItem Header="전체 초기화 · 최초 시간표로…" Click="ResetClick"/>
+     </MenuItem>
+     <MenuItem x:Name="LocksMenu" Header="잠금">
+      <MenuItem x:Name="LockSelectionOption" Header="다중 잠금 모드" IsCheckable="True" Click="ToggleLockSelectionClick"/>
+      <MenuItem Header="선택한 수업 일괄 잠금" Click="LockSelectedClick"/>
+      <MenuItem Header="선택한 수업 일괄 해제" Click="UnlockSelectedClick"/>
+      <Separator/>
+      <MenuItem Header="현재 보이는 전체 수업 잠금" Click="LockVisibleClick"/>
+      <MenuItem Header="현재 보이는 전체 수업 잠금 해제" Click="UnlockVisibleClick"/>
+     </MenuItem>
+     <MenuItem Header="월별 통계" Click="MonthlyStatisticsClick"/>
+     <MenuItem Header="옵션">
+      <MenuItem x:Name="ExclusionsMenu" Header="날짜별 학년 행사 제외…" Click="ExclusionsClick"/>
+      <Separator/>
+      <MenuItem x:Name="AutoPreview" Header="교체안 확인 창 자동 열기" IsCheckable="True" IsChecked="True"/>
+      <MenuItem x:Name="ShowHints" Header="수동 연쇄 추천 음영 표시" IsCheckable="True" IsChecked="True" Click="HintsChanged"/>
+      <MenuItem Header="날짜 설정 펼치기/접기" Click="CalendarToggleClick"/>
+     </MenuItem>
+    </Menu>
+    <Menu VerticalAlignment="Center">
+     <MenuItem Header="프로그램 정보" Click="AboutClick"/>
+     <MenuItem Header="도움말">
+      <MenuItem Header="사용 방법…" Click="HelpClick"/>
+      <MenuItem Header="학교 상황별 활용…" Click="ScenariosHelpClick"/>
+      <MenuItem Header="현재 모드 도움말…" Click="ModeHelpClick" InputGestureText="F1"/>
+      <MenuItem Header="단축키·마우스 조작…" Click="ShortcutsHelpClick"/>
+      <Separator/>
+      <MenuItem Header="버전 히스토리…" Click="VersionHistoryClick"/>
+     </MenuItem>
+    </Menu>
+    </StackPanel>
+   </Grid>
+   <TabControl x:Name="WorkModes" Style="{StaticResource ModeTabs}" MinHeight="26" Margin="0,0,0,2" SelectedIndex="0" SelectionChanged="WorkModeChanged">
+    <TabItem Header="조회 모드" Style="{StaticResource ModeTab}" Tag="{StaticResource AquaBlue}" BorderBrush="#3F79A9"/>
+    <TabItem Header="맞교환 모드" Style="{StaticResource ModeTab}" Tag="{StaticResource AquaMint}" BorderBrush="#34785C"/>
+    <TabItem Header="보강 모드" Style="{StaticResource ModeTab}" Tag="{StaticResource AquaCyan}" BorderBrush="#2E7484"/>
+    <TabItem Header="수동 교체 모드" Style="{StaticResource ModeTab}" Tag="{StaticResource AquaLavender}" BorderBrush="#775AAB"/>
+    <TabItem Header="AI 자동 모드" Style="{StaticResource ModeTab}" Tag="{StaticResource AquaBlue}" BorderBrush="#3F79A9"/>
+   </TabControl>
+   <Grid x:Name="ToolbarLayout" Margin="0,0,0,1" SizeChanged="ToolbarSizeChanged">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <Grid.ColumnDefinitions><ColumnDefinition x:Name="ToolbarLeft" Width="3*"/><ColumnDefinition x:Name="ToolbarRight" Width="2*"/></Grid.ColumnDefinitions>
+   <WrapPanel x:Name="BoardTools" Grid.Row="0" Grid.Column="0" Margin="0,0,8,3">
+    <ComboBox x:Name="ViewMode" Width="96" SelectionChanged="FilterChanged"><ComboBoxItem Content="교사 전체"/><ComboBoxItem Content="학급 전체"/></ComboBox>
+    <ComboBox x:Name="WeekFilter" Width="150" DisplayMemberPath="Label" SelectionChanged="FilterChanged"/>
+    <ComboBox x:Name="DayFilter" Width="90" SelectionChanged="FilterChanged" DisplayMemberPath="Label"/>
+    <TextBlock Text="찾기 " VerticalAlignment="Center"/><TextBox x:Name="SearchBox" Width="115" TextChanged="SearchChanged" ToolTip="교사·학급·과목. 입력 후 잠시 멈추면 강조합니다."/>
+    <Slider x:Name="Zoom" Minimum="0.7" Maximum="1.8" Value="1" Width="70" Margin="4,0,8,0" VerticalAlignment="Center" ValueChanged="ZoomChanged"/>
+    <Button Content="폭 맞춤" Click="FitClick"/>
+    <Button x:Name="ExclusionsButton" Content="학년 행사 제외" Click="ExclusionsClick"/>
+
+   </WrapPanel>
+   <WrapPanel x:Name="ModeActions" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
+    <CheckBox x:Name="ChangedRowsOnly" Content="변경된 행만 보기" Margin="4,0,12,0" VerticalAlignment="Center" Click="ChangedRowsClick"/>
+    <Button x:Name="LockRangeButton" Content="다중 잠금" Click="ToggleLockSelectionClick"/>
+    <WrapPanel x:Name="AutoOptionsPanel" MaxWidth="{Binding ActualWidth, ElementName=ModeActions}" Visibility="Collapsed" ToolTip="처음 선택한 수업 날짜가 기준입니다. 예: 수요일 수업은 당일 우선 → 이전 허용 시 화요일, 이후 허용 시 목요일까지 검토. 오늘 날짜와는 별개입니다. 편집 허용 시작일 이전은 제외합니다.">
+     <TextBlock x:Name="DateDirectionHint" Text="당일 우선 · 추가 허용: " VerticalAlignment="Center" Margin="0,0,6,0"/>
+     <CheckBox x:Name="AllowEarlier" Content="이전 날짜 허용" Margin="0,0,12,0" VerticalAlignment="Center" Click="DirectionChanged"/>
+     <CheckBox x:Name="AllowLater" Content="이후 날짜 허용" IsChecked="False" Margin="0,0,12,0" VerticalAlignment="Center" Click="DirectionChanged"/>
+    </WrapPanel>
+    <Button x:Name="AutoButton" Content="자동 교체안 찾기" Click="AutoClick"/>
+    <Button x:Name="ApplyButton" Content="변경 적용" Click="ApplyClick" FontWeight="SemiBold"/>
+    <Button x:Name="DraftUndoButton" Content="연쇄 한 단계 뒤로" Click="DraftUndoClick" Visibility="Collapsed"/>
+    <Button Content="선택·작업 취소" Click="CancelClick"/>
+    <Button x:Name="PreviewButton" Content="교체안 보기" Click="PreviewClick" IsEnabled="False"/>
+   </WrapPanel>
+    <Border x:Name="WorkflowGuide" Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" Background="{StaticResource AquaGlass}" BorderBrush="{StaticResource AquaEdge}" BorderThickness="1" CornerRadius="8" Padding="6,2" MinHeight="66" VerticalAlignment="Stretch">
+     <Grid>
+      <Grid.RowDefinitions><RowDefinition Height="Auto" MinHeight="28"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <DockPanel x:Name="TargetSurface" Grid.Row="0" Background="{StaticResource AquaBlue}">
+       <Button x:Name="ClearTargetButton" DockPanel.Dock="Right" Content="목적 해제" Click="ClearTargetClick" Height="24" MinHeight="24" Margin="5,0,2,0" Padding="6,0" IsEnabled="False"/>
+       <TextBlock x:Name="TargetHint" Text="수업을 선택하세요." Foreground="#1E3A8A" FontSize="13" MaxHeight="40" FontWeight="SemiBold" Margin="5,3" VerticalAlignment="Center" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+      </DockPanel>
+      <TextBlock Grid.Row="1" x:Name="ActionHint" Text="파일 → 시간표 파일 열기에서 Excel·CSV 또는 저장한 .ttm을 선택하세요." Foreground="#8C310D" FontSize="14" MaxHeight="54" FontWeight="SemiBold" Margin="5,4,5,3" VerticalAlignment="Center" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+     </Grid>
+    </Border>
+   </Grid>
+   <Expander x:Name="CalendarPanel" IsExpanded="False" Margin="0,0,0,2">
+    <Expander.Header><StackPanel Orientation="Horizontal"><TextBlock x:Name="CalendarHint" Text="날짜 설정 · 1주 시작일과 편집 허용 시작일" Foreground="#475569"/><TextBlock Text="{Binding Status}" Margin="18,0,0,0" Foreground="#64748B" FontSize="10" VerticalAlignment="Center" ToolTip="{Binding Status}"/></StackPanel></Expander.Header>
+    <WrapPanel x:Name="CalendarTools" Margin="4,3,0,3">
+     <Button Content="관리 월 변경" Click="MonthClick"/>
+     <TextBlock Text="1주 시작(월) " VerticalAlignment="Center"/><DatePicker x:Name="FirstWeekDate" Width="130" SelectedDateFormat="Short" SelectedDateChanged="CalendarChanged"/>
+     <TextBlock Text="편집 허용 시작일 " Margin="12,0,0,0" VerticalAlignment="Center"/><DatePicker x:Name="WorkDate" ToolTip="이 날짜보다 앞선 수업의 편집을 막습니다. AI의 이전·이후 날짜는 선택 수업 날짜를 기준으로 판단합니다. 과거 날짜도 검토하려면 이 시작일을 앞당기세요." Width="130" SelectedDateFormat="Short" SelectedDateChanged="CalendarChanged"/>
+     <Button Content="오늘" Margin="8,0,6,0" Click="TodayClick"/><Button x:Name="RepeatTwoWeeks" Content="2주 반복본 만들기" Margin="0" Click="RepeatTwoWeeksClick"/>
+    </WrapPanel>
+   </Expander>
+   <StackPanel x:Name="BasketPanel" Height="78" Visibility="Collapsed" Margin="0,0,0,4">
+    <TextBlock x:Name="BasketHint" FontWeight="SemiBold"/>
+    <ListBox x:Name="BasketList" DisplayMemberPath="Label" SelectionChanged="BasketSelectionChanged" PreviewMouseLeftButtonDown="BasketMouseDown" MaxHeight="62" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+     <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ListBox.ItemsPanel>
+    </ListBox>
+   </StackPanel>
+  </StackPanel>
+  </Border>
+  <Border Background="White" BorderBrush="{StaticResource AquaEdge}" BorderThickness="1" CornerRadius="8" Padding="1">
+  <Grid x:Name="Workspace">
+   <Grid.RowDefinitions><RowDefinition Height="26"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+   <Grid x:Name="DateHeaderBar" Grid.Row="0" Background="White">
+    <Grid.ColumnDefinitions><ColumnDefinition x:Name="DateNameColumn" Width="80"/><ColumnDefinition Width="*"/><ColumnDefinition x:Name="DateScrollGutter" Width="0"/></Grid.ColumnDefinitions>
+    <Border BorderBrush="#DFE6EE" BorderThickness="0,0,1,1"><TextBlock Text="날짜 · 요일" Foreground="{StaticResource AquaInk}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="11"/></Border>
+    <Canvas x:Name="DateHeaderCanvas" Grid.Column="1" ClipToBounds="True"/>
+   </Grid>
+   <DataGrid Grid.Row="1" x:Name="TimetableGrid" SelectionUnit="Cell" SelectionMode="Single" FrozenColumnCount="1"
+    CanUserReorderColumns="False" CanUserSortColumns="False" CanUserResizeRows="False" GridLinesVisibility="Horizontal"
+    VerticalGridLinesBrush="#DFE6EE" HorizontalGridLinesBrush="#DFE6EE" AllowDrop="True"
+    PreviewMouseLeftButtonDown="BoardMouseDown" PreviewMouseLeftButtonUp="BoardMouseUp" PreviewMouseRightButtonUp="BoardRightClick"
+    SelectedCellsChanged="LockCellsChanged" PreviewMouseMove="BoardMouseMove" MouseLeave="BoardPointerLeave" DragOver="BoardDragOver" Drop="BoardDrop" SizeChanged="BoardSizeChanged">
+    <DataGrid.CellStyle><Style TargetType="DataGridCell">
+     <Setter Property="Padding" Value="0"/><Setter Property="BorderThickness" Value="0"/><Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="DataGridCell">
+      <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"><ContentPresenter/></Border>
+     </ControlTemplate></Setter.Value></Setter>
+    </Style></DataGrid.CellStyle>
+   </DataGrid>
+   <Canvas x:Name="BoundaryCanvas" Grid.Row="1" IsHitTestVisible="False" ClipToBounds="True" Panel.ZIndex="10"/>
+   <Canvas x:Name="DragCanvas" Grid.RowSpan="2" IsHitTestVisible="False" ClipToBounds="True" Panel.ZIndex="20"/>
+  </Grid>
+  </Border>
+ </DockPanel>
+</Window>

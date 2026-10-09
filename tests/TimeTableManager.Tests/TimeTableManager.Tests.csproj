@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/TimeTableManager.Infrastructure/TimeTableManager.Infrastructure.csproj" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <Compile Include="../../src/TimeTableManager.App/MainViewModel.cs" Link="MainViewModel.cs" />
+  </ItemGroup>
+</Project>

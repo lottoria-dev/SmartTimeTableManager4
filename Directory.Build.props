@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>14</LangVersion>
+    <Version>4.0.3</Version>
+    <AssemblyVersion>4.0.3.0</AssemblyVersion>
+    <FileVersion>4.0.3.0</FileVersion>
+    <Product>Smart Timetable Manager 4</Product>
+    <SatelliteResourceLanguages>ko</SatelliteResourceLanguages>
+    <Deterministic>true</Deterministic>
+    <DebugType Condition="'$(Configuration)' == 'Release'">embedded</DebugType>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+</Project>

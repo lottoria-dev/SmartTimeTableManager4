@@ -1,0 +1,106 @@
+<script src="/js/redirect.js" data-app-root="/" data-page-key="timetable"></script>
+<style>
+#smt4-page{--smt-ink:#243449;--smt-muted:#536477;--smt-blue:#315e92;--smt-line:#e5ebf2;color:var(--smt-ink);line-height:1.7;max-width:1000px;margin:auto}
+#smt4-page,#smt4-page *{box-sizing:border-box}
+#smt4-page h2,#smt4-page h3,#smt4-page h4,#smt4-page p{margin-top:0}
+#smt4-page a{color:var(--smt-blue);overflow-wrap:anywhere}
+#smt4-page .smt-hero{display:flex;gap:18px;align-items:center;padding:24px;background:#eef4fb;border-radius:16px;margin-bottom:20px}
+#smt4-page .smt-logo{width:64px;height:64px;flex:0 0 auto;object-fit:contain;display:block}
+#smt4-page .smt-badge{font-size:.8rem;font-weight:700;color:#466489}
+#smt4-page h2{font-size:1.7rem;line-height:1.3;margin:5px 0 8px}
+#smt4-page .smt-hero p{color:var(--smt-muted);margin-bottom:0}
+#smt4-page .smt-actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 10px}
+#smt4-page .smt-button{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 14px;border-radius:11px;background:#edf1f6;color:#294563;text-decoration:none;font-weight:700;font-size:.9rem}
+#smt4-page .smt-button-primary{background:#dceaf9;color:#214f82}
+#smt4-page .smt-button:hover{background:#d3e2f2}
+#smt4-page a:focus-visible,#smt4-page summary:focus-visible{outline:2px solid #315e92;outline-offset:3px}
+#smt4-page .smt-meta{color:var(--smt-muted);font-size:.85rem}
+#smt4-page section{padding:23px 0;border-bottom:1px solid var(--smt-line)}
+#smt4-page h3{font-size:1.2rem;margin-bottom:14px}
+#smt4-page .smt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#smt4-page .smt-card{padding:17px;border-radius:12px;background:#f4f7fb;min-width:0}
+#smt4-page .smt-card:nth-child(2n){background:#eef7f4}
+#smt4-page .smt-card h4{font-size:1rem;margin-bottom:6px}
+#smt4-page .smt-card p{margin-bottom:0;color:var(--smt-muted);font-size:.94rem}
+#smt4-page ul,#smt4-page ol{padding-left:1.3rem;margin:0}
+#smt4-page li{margin-bottom:7px}
+#smt4-page li:last-child{margin-bottom:0}
+#smt4-page details{padding:13px 16px;margin-bottom:9px;background:#f3f6fa;border-radius:11px}
+#smt4-page summary{cursor:pointer;font-weight:700}
+#smt4-page details ul{margin-top:12px;font-size:.94rem}
+#smt4-page .smt-note{padding:14px 16px;border-radius:12px;background:#fff5e8;font-size:.92rem;margin-top:16px}
+#smt4-page code{font-family:Consolas,monospace;font-size:.88em;background:#edf1f6;padding:2px 4px;border-radius:4px;overflow-wrap:anywhere}
+#smt4-page footer{padding:22px 0;color:var(--smt-muted);font-size:.85rem}
+#smt4-page footer p{margin-bottom:6px}
+@media(max-width:640px){#smt4-page .smt-hero{padding:18px;gap:12px;align-items:flex-start}#smt4-page h2{font-size:1.35rem}#smt4-page .smt-logo{width:48px;height:48px}#smt4-page .smt-grid{grid-template-columns:1fr}#smt4-page .smt-actions{display:grid;grid-template-columns:1fr}#smt4-page .smt-button{width:100%}}
+</style>
+<div id="smt4-page">
+  <header class="smt-hero">
+    <img class="smt-logo" src="/labs/assets/smarttimetable4.png" alt="Smart Timetable Manager 4 아이콘" width="64" height="64" decoding="async">
+    <div><span class="smt-badge">Windows · 4.0.3</span><h2>Smart Timetable Manager 4</h2><p>큰 시간표에서 수업을 확인하고, 교체·보강을 편하게 처리하는 한국 학교용 프로그램입니다.</p></div>
+  </header>
+  <div class="smt-actions">
+    <a class="smt-button smt-button-primary" href="https://github.com/lottoria-dev/SmartTimeTableManager4/releases/download/4.0.3/SmartTimeTableManager4-4.0.3-win-x64.zip" target="_blank" rel="noopener noreferrer">4.0.3 실행 ZIP 다운로드</a>
+    <a class="smt-button" href="https://github.com/lottoria-dev/SmartTimeTableManager4/releases/tag/4.0.3" target="_blank" rel="noopener noreferrer">릴리즈·해시 확인</a>
+    <a class="smt-button" href="#smt-history">버전 히스토리</a>
+    <a class="smt-button" href="https://github.com/lottoria-dev/SmartTimeTableManager4" target="_blank" rel="noopener noreferrer">소스 코드</a>
+  </div>
+  <p class="smt-meta">Windows x64 · 자체 포함 실행 ZIP · 교육기관 교직원 업무 목적 무료 사용</p>
+  <section aria-labelledby="smt-start">
+    <h3 id="smt-start">처음 사용하기</h3>
+    <ol><li>실행 ZIP 압축 해제 → <code>TimeTableManager.exe</code> 실행.</li><li>파일 → 시간표 파일 열기. Excel·CSV는 기초 시간표, <code>.ttm</code>은 저장한 작업.</li><li>관리 월·편집 허용 시작일 확인 → 모드 선택 → 변경 적용 → 저장.</li></ol>
+    <p class="smt-meta" style="margin:12px 0 0">학급·교사 전체 CSV 및 교과명·교사명 동일셀/분리셀 Excel 양식을 사용합니다. 기본 조회는 오늘부터 다음 주 금요일까지입니다.</p>
+  </section>
+  <section aria-labelledby="smt-templates">
+    <h3 id="smt-templates">학교용 기본 템플릿</h3>
+    <div class="smt-grid">
+      <div class="smt-card"><h4>동일셀</h4><p>한 셀에 교과명과 교사명을 줄바꿈으로 입력합니다.</p></div>
+      <div class="smt-card"><h4>분리셀</h4><p>교과 행 바로 아래에 교사 행. 아래 행의 학년·반은 비워 둡니다.</p></div>
+    </div>
+    <p class="smt-meta" style="margin:12px 0">두 양식 모두 지원합니다. 같은 예제 수업이며 교사명은 모두 가상 이름입니다. 학교 자료로 바꾸어 XLSX로 저장하세요.</p>
+    <a class="smt-button" href="https://github.com/lottoria-dev/SmartTimeTableManager4/releases/download/4.0.3/SmartTimeTableManager4-4.0.3-Templates.zip" target="_blank" rel="noopener noreferrer">Excel 템플릿 두 가지 다운로드</a>
+    <p class="smt-meta" style="margin:10px 0 0">실행 ZIP의 templates 폴더에도 동봉합니다. UTF-8 CSV와 간단한 편집 안내 포함.</p>
+  </section>
+  <section aria-labelledby="smt-modes">
+    <h3 id="smt-modes">상황에 맞는 다섯 모드</h3>
+    <div class="smt-grid">
+      <div class="smt-card"><h4>조회</h4><p>전체 시간표·변동 색상 확인. 셀을 누르면 같은 교사의 수업을 강조합니다.</p></div>
+      <div class="smt-card"><h4>맞교환</h4><p>가능한 수업을 음영으로 확인하고 두 수업을 1대1로 교환합니다.</p></div>
+      <div class="smt-card"><h4>보강</h4><p>공강 교사 또는 교장·교감 특별 보강을 배정합니다. 원래·새 담당을 확인합니다.</p></div>
+      <div class="smt-card"><h4>수동 교체</h4><p>카드를 밀어내듯 순서대로 배치합니다. 진한 초록은 추천, 연한 초록은 배치 가능입니다.</p></div>
+      <div class="smt-card"><h4>AI 자동</h4><p>시작 수업과 목적 시간을 지정합니다. 당일 우선으로 찾고 필요하면 이전·이후 날짜로 넓힙니다.</p></div>
+      <div class="smt-card"><h4>월 관리·변경 확인</h4><p>변경 다이어그램과 결보강 통계. 잠금·학년 행사 제외·재변경 확인을 함께 제공합니다.</p></div>
+    </div>
+  </section>
+  <section aria-labelledby="smt-cases">
+    <h3 id="smt-cases">학교에서 이렇게 사용합니다</h3>
+    <details><summary>지각·회의로 1교시를 6교시로 옮겨야 할 때</summary><ul><li>AI 자동 → 시작 수업 → 6교시 목적 칸 → 교체안 찾기.</li><li>당일 안이 없으면 이전·이후 날짜 범위를 확대합니다.</li><li>지정한 목적 시간과 함께 바뀌는 수업을 확인하고 적용합니다.</li></ul></details>
+    <details><summary>갑작스러운 결근으로 보강이 필요할 때</summary><ul><li>보강 → 수업 선택 → 공강 교사 선택.</li><li>* 표시 교사의 연강을 확인합니다. 교장·교감 특별 보강도 선택할 수 있습니다.</li></ul></details>
+    <details><summary>출장으로 하루 또는 오전 수업을 비워야 할 때</summary><ul><li>수업 우클릭 → 교사 하루 수업 이동 → 하루 모두 / 오전만 다른 날짜로.</li><li>배치를 우선한 뒤 연강 교사·교시·교과를 확인합니다.</li><li>적용 후 수작업 확인 목록을 보며 필요한 수업만 조정합니다.</li></ul></details>
+    <details><summary>AI 배치 후 다른 교사의 시간이 맞지 않을 때</summary><ul><li>AI 교체안을 확인·적용한 뒤 수동 교체로 해당 수업을 선택합니다.</li><li>재변경을 확인하고 새 시간에 배치합니다. 밀려난 카드도 순서대로 배치합니다.</li><li>모든 카드 배치 후 적용·저장합니다.</li></ul></details>
+    <details><summary>학년 행사 또는 다른 요일 일과를 운영할 때</summary><ul><li>행사: 날짜 제목 우클릭 → 해당 학년 제외.</li><li>일과 변경: 날짜 제목 우클릭 → 기초 요일 적용 → 가져올 요일 선택.</li><li>기초 요일 적용은 학교 계획으로 관리하며 교체 이력·변동 색상에서 제외합니다.</li></ul></details>
+    <div class="smt-note">하루·오전 비우기는 <strong>배치 우선 → 연강 확인 → 필요한 수업만 수작업 조정</strong>입니다. 3·4연강 이상이 포함될 수 있으므로 적용 전 확인하세요.</div>
+  </section>
+  <section aria-labelledby="smt-save">
+    <h3 id="smt-save">저장과 통계</h3>
+    <ul><li><code>.ttm</code>은 작업 보존, Excel·CSV는 배정 결과 전달에 사용합니다.</li><li>월 경계 이동은 양쪽 월 통계를 확인합니다. 다음 월은 최신 작업 파일에서 관리 월을 변경합니다.</li><li>월 통계는 기초 배정과 현재 배정의 최종 차이입니다. 실제 실시·미실시 기록과는 별개입니다.</li><li>기초 요일 적용은 Ctrl+Z 대상이 아닙니다. 바꾸려면 기초 요일을 다시 적용합니다.</li></ul>
+  </section>
+  <section aria-labelledby="smt-release">
+    <h3 id="smt-release">4.0.3 · 템플릿·버전 안내</h3>
+    <ul><li>오프라인 버전 히스토리와 익명 동일셀·분리셀 Excel 템플릿 동봉.</li><li>AI 교체안: 교사별 이동·재변경·연강 허용. 미허용 교사는 유지하고 대체안 재탐색.</li><li>우클릭·하위 메뉴의 빈 아이콘 영역 제거. 학년 체크 표시 유지.</li><li>수업 교체·보강에 집중한 C# Windows 프로그램.</li><li>다섯 모드, 지정 시간 이동, 수동 연쇄 교체와 짧은 상황별 도움말.</li><li>학교 계획·월 관리·결보강 통계·변경 다이어그램.</li><li>새 저장소 <code>SmartTimeTableManager4</code>에서 4.x 버전을 별도로 관리합니다.</li></ul>
+    <p class="smt-meta" style="margin:14px 0 0"><a href="https://github.com/lottoria-dev/SmartTimeTableManager4/releases/download/4.0.3/SmartTimeTableManager4-4.0.3-GitHub.zip" target="_blank" rel="noopener noreferrer">4.0.3 소스 ZIP</a> · <a href="https://github.com/lottoria-dev/SmartTimeTableManager4/releases/download/4.0.3/SmartTimeTableManager4-4.0.3-GitHub.sha256.txt" target="_blank" rel="noopener noreferrer">소스 ZIP SHA-256</a> · <a href="https://github.com/lottoria-dev/SmartTimeTableManager4/releases/download/4.0.3/SHA256SUMS.txt" target="_blank" rel="noopener noreferrer">실행 ZIP SHA-256</a></p>
+  </section>
+  <section aria-labelledby="smt-history">
+    <h3 id="smt-history">버전 히스토리</h3>
+    <details open><summary>4.0.3 · 템플릿·배포 안내</summary><ul><li>앱 도움말에 버전 히스토리. 동일셀·분리셀 XLSX와 CSV 제공.</li><li>MathTime 제목 아이콘·버전별 안내·템플릿 다운로드 정리.</li></ul></details>
+    <details><summary>4.0.2 · 교사별 AI 이동 허용</summary><ul><li>본인 추가 수업·재변경·연강을 교사별로 선택 허용.</li><li>미허용 교사의 수업을 유지하고 완성된 대체안 재탐색.</li></ul></details>
+    <details><summary>4.0.1 · 우클릭 메뉴 정리</summary><ul><li>우클릭·하위 메뉴의 빈 아이콘 여백 제거. 실제 체크 표시 유지.</li></ul></details>
+    <details><summary>4.0.0 · 첫 정식 소스</summary><ul><li>다섯 작업 모드, 지정 시간·연쇄 교체·보강·잠금.</li><li>기초 요일 적용·월 관리·통계·다이어그램·학교 상황별 도움말.</li></ul></details>
+    <p class="smt-meta"><a href="https://github.com/lottoria-dev/SmartTimeTableManager4/releases" target="_blank" rel="noopener noreferrer">GitHub 릴리즈 목록</a> · 태그는 4.0.3처럼 버전명만 사용합니다.</p>
+  </section>
+  <footer>
+    <p><strong>개발: MathTime</strong> · 4.0.3 · 2026.10.09. · <a href="mailto:mathtime.ai@gmail.com">문의</a></p>
+    <p>교육기관 교직원의 학급 운영·업무 목적 무료 사용. 상업적 영리 목적 사용 금지. <a href="https://github.com/lottoria-dev/SmartTimeTableManager4/blob/4.0.3/LICENSE.md" target="_blank" rel="noopener noreferrer">사용 조건</a> · <a href="https://github.com/lottoria-dev/SmartTimeTableManager4/blob/4.0.3/THIRD_PARTY_NOTICES.md" target="_blank" rel="noopener noreferrer">외부 구성요소</a></p>
+    <p>기능 기획 후 일부 코드 작성·검토와 문서화에 생성형 AI를 활용했습니다. 자동 교체 탐색은 PC 안에서 수행하며 외부 AI API에 시간표를 전송하지 않습니다.</p>
+  </footer>
+</div>

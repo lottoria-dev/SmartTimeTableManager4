@@ -1,0 +1,30 @@
+{
+  "version": "4.0.3",
+  "checks": [
+    {
+      "format": "combined",
+      "xlsx_rows": 19,
+      "lessons": 544,
+      "classes": 17,
+      "teachers": 37,
+      "csv_parity": true,
+      "private_names_absent": true,
+      "teacher_conflicts": 0
+    },
+    {
+      "format": "split",
+      "xlsx_rows": 36,
+      "lessons": 544,
+      "classes": 17,
+      "teachers": 37,
+      "csv_parity": true,
+      "private_names_absent": true,
+      "teacher_conflicts": 0
+    }
+  ],
+  "source_data_preserved_except_teacher_names": true,
+  "xlsx_csv_structural_check": true,
+  "csharp_import_execution": false,
+  "excel_windows_execution": false,
+  "visual_preview": "Layout rendered; Korean glyph rendering unavailable in this environment. Exported Korean text verified in XML."
+}

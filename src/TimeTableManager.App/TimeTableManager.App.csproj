@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>TimeTableManager</AssemblyName>
+    <AssemblyTitle>Smart Timetable Manager 4</AssemblyTitle>
+    <ApplicationIcon>Assets/TimeTableManager4.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Assets/TimeTableManager4.ico" />
+    <Resource Include="Assets/TimeTableManager4.ico" />
+    <None Remove="Assets/TimeTableManager4.png" />
+    <Resource Include="Assets/TimeTableManager4.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../../VERSION_HISTORY.txt" LogicalName="TimeTableManager.VersionHistory" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../TimeTableManager.Infrastructure/TimeTableManager.Infrastructure.csproj" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+  </ItemGroup>
+</Project>

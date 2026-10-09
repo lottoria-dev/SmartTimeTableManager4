@@ -1,0 +1,10 @@
+원본 프로그램 고지 (첨부 README에 명시된 내용 보존)
+
+Copyright (c) 2026 lottoria. All rights reserved.
+본 소프트웨어는 교육 현장의 편의를 돕기 위해 공개되었습니다.
+허용: 초·중·고등학교, 대학교 및 관련 공공 교육기관 소속 교직원의 학급 운영 및 업무 목적의 무료 사용.
+금지: 상업적 영리 목적 사용.
+
+원본 ZIP에는 README에서 언급한 별도 LICENSE 파일이 없었음.
+이 문서는 위 원본 고지를 보존하며 확인되지 않은 추가 권한을 부여하지 않음.
+C# 재작성에서 채택한 외부 라이브러리의 조건은 THIRD_PARTY_NOTICES.md와 third-party-licenses 참조.

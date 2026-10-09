@@ -17,6 +17,7 @@
 - 첨부 XLSX 동일셀/분리셀 및 CSV 양식 사용. NEIS 전체 시간표 직접 내려받기를 전제로 하지 않음.
 - templates의 두 XLSX·CSV는 같은 수업 데이터. 분리셀 교사 행 학년·반은 공란. 공개 템플릿에 실명·원본 파일·이름 대응표를 포함하지 않음.
 - VERSION_HISTORY.txt는 앱 내장 버전 기록. CHANGELOG.md·MathTime 버전 안내와 함께 갱신. 실행 ZIP에도 templates와 버전 기록 동봉.
+- build_release.cmd는 게시·ZIP·SHA-256 일괄 생성. Package-Release.ps1은 기존 게시물을 포장. 소개·라이선스·원본 고지·버전 기록·익명 템플릿·외부 구성요소 고지는 필수. .NET/빌더 스크립트 실제 실행은 사용자 PC에서 확인.
 - 같은 표 구조에서 기존 행·셀 갱신. 가로 스크롤·선택 유지, 본표 하단에 작업 패널을 만들지 않음.
 - 겹치는 모드 헤더는 가로 StackPanel IsItemsHost와 선택 ZIndex 사용. 본표 전체 효과·애니메이션 금지.
 - 도움말 시나리오를 짧게 유지. 고정 모드 도움말 인덱스0~11을 바꿀 때 MainWindow.Help.cs 연결도 점검.

@@ -31,6 +31,8 @@
 
 자체 포함 실행 ZIP은 Windows x64용입니다. 개발용 소스는 .NET 10 / C# 14 / WPF입니다. Visual Studio 실행 방법은 [VISUAL_STUDIO_GUIDE.txt](VISUAL_STUDIO_GUIDE.txt)에 있습니다.
 
+배포판은 `build_release.cmd` 한 번으로 게시·ZIP·SHA-256을 생성합니다. 실행 ZIP에 간단한 소개·라이선스·버전 히스토리·두 가지 템플릿을 동봉합니다. Visual Studio에서 이미 게시한 경우 `build_release.cmd -SkipPublish`로 포장합니다. 같은 버전 재생성은 `-Force`. [BUILD_RELEASE_GUIDE.txt](BUILD_RELEASE_GUIDE.txt)를 참고하세요.
+
 ## 기본 템플릿
 
 - [동일셀 Excel](templates/기초시간표_동일셀.xlsx): 교과명과 교사명을 한 셀에 줄바꿈으로 입력.

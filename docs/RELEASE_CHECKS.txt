@@ -26,7 +26,11 @@
 [ ] 도움말 → 학교 상황별 활용 / F1 / 단축키 연결.
 [ ] 도움말 → 버전 히스토리: 4.0.3~4.0.0 표시, 오프라인·스크롤·닫기·재열기.
 [ ] 자체 포함 게시 ZIP을 새 폴더에서 실행. 아이콘·명칭·버전 확인.
-[ ] 실행 ZIP에 라이선스·외부 구성요소 고지·templates·VERSION_HISTORY.txt 동봉, SHA256SUMS.txt 대조.
+[ ] build_release.cmd: 게시·ZIP·SHA-256 한 번에 생성. 실패 시 오류 화면·실패 종료 코드 확인.
+[ ] build_release.cmd -SkipPublish: Visual Studio 게시물을 재컴파일 없이 포장.
+[ ] 같은 버전 재생성 -Force, 작업 경로에 공백·한글이 있는 경우 확인.
+[ ] 실행 ZIP에 README.txt·LICENSE.txt·원본 고지·외부 구성요소 고지·templates·VERSION_HISTORY.txt 동봉.
+[ ] 실행 ZIP·Templates ZIP의 .sha256.txt와 SHA256SUMS.txt를 실제 파일 해시와 대조.
 [ ] GitHub 새 저장소, 태그4.0.3, Release 자산명·MathTime 링크 일치.
 
 MathTime HTML·메뉴·사이트맵·태그/링크는 정적 점검. 브라우저 렌더링·실제 SPA 진입은 미확인.

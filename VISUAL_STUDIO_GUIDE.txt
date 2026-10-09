@@ -7,10 +7,11 @@ Smart Timetable Manager 4 · 4.0.3
 4. 제목과 프로그램 정보에서 4.0.3 확인.
 
 실행 ZIP 생성(사용자 PC)
-1. App 프로젝트 → 게시 → Standalone-win-x64 또는 publish-standalone.cmd 실행.
-2. PowerShell에서: powershell -NoProfile -ExecutionPolicy Bypass -File tools\Package-Release.ps1
-3. artifacts\release의 SmartTimeTableManager4-4.0.3-win-x64.zip과 SHA256SUMS.txt 확인.
+1. build_release.cmd 실행 → Release 게시·ZIP·SHA-256 자동 생성.
+2. Visual Studio에서 이미 게시했다면 build_release.cmd -SkipPublish 실행.
+3. artifacts\release의 실행 ZIP·템플릿 ZIP·개별 .sha256.txt·SHA256SUMS.txt 확인.
 4. 압축을 다른 폴더에 풀고 실행. docs\RELEASE_CHECKS.txt 확인 후 GitHub에 업로드.
+5. 같은 버전 재생성은 -Force. 자세한 방법은 BUILD_RELEASE_GUIDE.txt.
 
 템플릿·버전 히스토리
 1. templates의 두 XLSX를 각각 새 작업으로 열기. 양쪽 모두 17학급·37교사·1주544수업 확인.

@@ -1,0 +1,47 @@
+Smart Timetable Manager 4 · 배포 빌더 r2 (프로그램 버전 4.0.3)
+
+기존 소스에 수정 파일을 덮어쓴 경우 Visual Studio에서 프로젝트를 다시 불러옵니다.
+
+한 번에 배포판 생성
+1. .NET 10 SDK 또는 Visual Studio의 .NET 데스크톱 개발 환경 준비.
+2. TimeTableManager.sln이 있는 폴더에서 build_release.cmd 더블클릭.
+3. Release 게시 → 문서·템플릿 포함 ZIP → SHA-256 순서로 자동 생성.
+4. 완료 화면에서 Enter. 결과는 artifacts\release.
+
+같은 버전으로 다시 생성
+터미널에서: .\build_release.cmd -Force
+자동화·터미널에서 완료 화면 대기 생략: .\build_release.cmd -Force -NoPause
+publish-standalone.cmd로 실행해도 같은 과정을 진행합니다.
+
+Visual Studio를 사용하는 경우
+- Ctrl+Shift+B: 일반 빌드. ZIP·SHA-256은 생성하지 않음.
+- App 프로젝트 → 게시 → Standalone-win-x64.
+- 게시 폴더에 README.txt·LICENSE.txt·버전 기록·templates 포함.
+- 게시 후 .\build_release.cmd -SkipPublish 실행: 재컴파일 없이 ZIP·해시 생성.
+- 같은 버전 재포장: .\build_release.cmd -SkipPublish -Force
+- 별도 게시 폴더: .\build_release.cmd -SkipPublish -PublishDirectory "D:\게시폴더" -Force
+
+artifacts\release 결과
+- SmartTimeTableManager4-4.0.3-win-x64.zip: 실행 배포판.
+- SmartTimeTableManager4-4.0.3-win-x64.sha256.txt: 실행 ZIP 해시.
+- SmartTimeTableManager4-4.0.3-Templates.zip: 템플릿만 별도 다운로드용.
+- SmartTimeTableManager4-4.0.3-Templates.sha256.txt: 템플릿 ZIP 해시.
+- SHA256SUMS.txt: 두 ZIP 해시 목록.
+파일명 버전은 Directory.Build.props에서 자동으로 읽음. 태그에 v를 붙이지 않음.
+
+실행 ZIP 내용
+- TimeTableManager.exe
+- README.txt: 간단한 소개·실행 방법·연락처.
+- LICENSE.txt / LICENSE_ORIGINAL.txt: 사용 조건·원본 고지.
+- THIRD_PARTY_NOTICES.md / third-party-licenses: 외부 구성요소 고지.
+- VERSION_HISTORY.txt: 버전별 변경 내역.
+- templates: 동일셀·분리셀 XLSX 두 파일, CSV 두 파일, 사용방법.
+
+배포 전 확인
+- ZIP을 다른 폴더에 압축 해제 → exe 실행 → 두 Excel 양식 가져오기 확인.
+- PowerShell Get-FileHash "실행ZIP경로" -Algorithm SHA256의 값과 해시 파일 비교.
+- GitHub Release에 실행 ZIP·템플릿 ZIP·해시 파일 함께 업로드.
+- docs\RELEASE_CHECKS.txt 확인.
+
+이 소스는 빌더 구성·경로·문서·압축 파일을 정적으로 점검했습니다.
+Windows에서의 빌드·게시·실제 배포 빌더 실행은 사용자가 확인해야 합니다.

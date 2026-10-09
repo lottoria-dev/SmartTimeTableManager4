@@ -1359,7 +1359,7 @@
       "detail": "20"
     },
     {
-      "check": "NuGet lock JSON tests/TimeTableManager.Tests/packages.lock.json",
+      "check": "NuGet lock JSON src/TimeTableManager.Domain/packages.lock.json",
       "passed": true,
       "detail": ""
     },
@@ -1369,17 +1369,17 @@
       "detail": ""
     },
     {
-      "check": "NuGet lock JSON src/TimeTableManager.Application/packages.lock.json",
-      "passed": true,
-      "detail": ""
-    },
-    {
       "check": "NuGet lock JSON src/TimeTableManager.App/packages.lock.json",
       "passed": true,
       "detail": ""
     },
     {
-      "check": "NuGet lock JSON src/TimeTableManager.Domain/packages.lock.json",
+      "check": "NuGet lock JSON src/TimeTableManager.Application/packages.lock.json",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "check": "NuGet lock JSON tests/TimeTableManager.Tests/packages.lock.json",
       "passed": true,
       "detail": ""
     },
@@ -1389,12 +1389,12 @@
       "detail": ""
     },
     {
-      "check": "Project reference ../TimeTableManager.Domain/TimeTableManager.Domain.csproj",
+      "check": "Project reference ../TimeTableManager.Infrastructure/TimeTableManager.Infrastructure.csproj",
       "passed": true,
       "detail": ""
     },
     {
-      "check": "Project reference ../TimeTableManager.Infrastructure/TimeTableManager.Infrastructure.csproj",
+      "check": "Project reference ../TimeTableManager.Domain/TimeTableManager.Domain.csproj",
       "passed": true,
       "detail": ""
     },

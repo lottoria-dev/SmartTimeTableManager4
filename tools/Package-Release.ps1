@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
 [xml]$props = Get-Content -LiteralPath (Join-Path $repoRoot 'Directory.Build.props') -Encoding UTF8 -Raw
 $version = [string]$props.Project.PropertyGroup.Version
-if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Set a stable version before packaging.' }
+if ($version -notmatch '^\d+\.\d+\.\d+(?:-preview\.\d+)?$') { throw 'Set a stable or preview version before packaging.' }
 if ([string]::IsNullOrWhiteSpace($PublishDirectory)) {
     $PublishDirectory = Join-Path $repoRoot 'artifacts\standalone\win-x64'
 }
@@ -35,7 +35,8 @@ if (@($templateFiles | Where-Object Extension -eq '.xlsx').Count -ne 2 -or
 }
 $thirdParty = Join-Path $repoRoot 'third-party-licenses'
 if (-not (Test-Path -LiteralPath $thirdParty -PathType Container)) { throw 'Third-party license folder is missing.' }
-$output = Join-Path $repoRoot 'artifacts\public'
+$channel = if ($version -match '-preview\.') { 'preview' } else { 'release' }
+$output = Join-Path $repoRoot ('artifacts\' + $channel + '\' + $version)
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $zipPath = Join-Path $output "SmartTimeTableManager4-$version-win-x64.zip"
 $templateZipPath = Join-Path $output "SmartTimeTableManager4-$version-Templates.zip"
@@ -55,7 +56,11 @@ $temporaryTemplateZip = Join-Path $stage 'templates.zip'
 try {
     New-Item -ItemType Directory -Path $appStage -Force | Out-Null
     New-Item -ItemType Directory -Path $templateStage -Force | Out-Null
-    Get-ChildItem -LiteralPath $PublishDirectory -Force | Copy-Item -Destination $appStage -Recurse
+    # Standalone profile embeds runtime/native libraries. Never copy arbitrary publish-folder contents.
+    if (@(Get-ChildItem -LiteralPath $PublishDirectory -File | Where-Object { $_.Extension -eq '.dll' -or $_.Name -like '*.runtimeconfig.json' }).Count -gt 0) {
+        throw 'Use the single-file Standalone-win-x64 profile. This folder contains loose runtime files.'
+    }
+    Copy-Item -LiteralPath $exePath -Destination $appStage
     foreach ($document in $documents) {
         Copy-Item -LiteralPath (Join-Path $repoRoot $document.Source) -Destination (Join-Path $appStage $document.Target) -Force
     }
@@ -77,6 +82,8 @@ try {
             @(Get-ChildItem -LiteralPath $thirdParty -File -Recurse | ForEach-Object {
                 'third-party-licenses/' + $_.FullName.Substring($thirdParty.Length + 1).Replace('\','/')
             })
+        $actualFiles = @($archive.Entries | Where-Object { $_.Name } | ForEach-Object { $_.FullName.Replace('\','/') } | Sort-Object)
+        if (@(Compare-Object @($required | Sort-Object) $actualFiles).Count -ne 0) { throw 'Runtime ZIP contains unexpected or missing files.' }
         foreach ($entry in $required) {
             if ($entries -notcontains $entry) { throw ('ZIP entry is missing: ' + $entry) }
         }

@@ -40,7 +40,7 @@ public partial class MainWindow
         LockRangeButton.Content = lockSelectionMode ? "다중 잠금 종료" : "다중 잠금";
         ExclusionsMenu.IsEnabled = ExclusionsButton.IsEnabled = idle && vm.Session is not null;
         ViewMode.IsEnabled = WeekFilter.IsEnabled = DayFilter.IsEnabled = !busy && !lockSelectionMode;
-        CalendarTools.IsEnabled = idle;
+        CalendarTools.IsEnabled = idle && vm.Session is not null;
         AutoOptionsPanel.Visibility = drafting ? Visibility.Visible : Visibility.Collapsed;
         AutoButton.Visibility = automatic ? Visibility.Visible : Visibility.Collapsed;
         AutoOptionsPanel.IsEnabled = !busy && !lockSelectionMode;
@@ -167,7 +167,7 @@ public partial class MainWindow
         if(manualDraft is null || vm.Session is null)return;
         vm.Select(manualDraft.ActiveId);targetCell=null;fixedTargetSlotId=null;
         var plan=manualDraft.Plan();if(plan is not null)vm.ShowPlan(plan);
-        placementAdvice=manualDraft.ActiveId is null?[]:MonthlyTimetable.WorkingSlots(vm.Session.Document).ToDictionary(x=>x.Id,x=>manualDraft.Advice(x.Id));
+        placementAdvice=manualDraft.ActiveId is null?[]:WorkPeriod.EditableSlots(vm.Session.Document).ToDictionary(x=>x.Id,x=>manualDraft.Advice(x.Id));
         updatingBasket=true;
         var held=manualDraft.Held;
         BasketList.ItemsSource=held.Select(x=>new Option(x.Id,$"{vm.Session.Document.Current.Classes.Single(c=>c.Id==x.ClassId).Name}\n{x.Subject} · {vm.Teachers.Single(t=>t.Id==x.TeacherId).Label}")).ToArray();
@@ -186,6 +186,7 @@ public partial class MainWindow
     private void ManualCell(BoardCell cell)
     {
         if(manualDraft is null)return;
+        if (!CalendarReady) { ActionHint.Text = "날짜가 바뀌었습니다. 초안을 취소한 뒤 오늘 기준으로 다시 시작하세요."; return; }
         if(manualDraft.ActiveId is not { } active){if(cell.LessonId is { } next)Pick(next);return;}
         if(!AllowedTarget(active,cell)){if(cell.LessonId is { } next)Pick(next);return;}
         var advice = manualDraft.AdviceBeforeDatePermission(cell.SlotId);
@@ -220,7 +221,6 @@ public partial class MainWindow
     private void DraftUndoClick(object sender,RoutedEventArgs e)
     { if(!busy && !dragActive && manualDraft?.Undo()==true)RefreshManualBoard(); }
     private void HintsChanged(object sender,RoutedEventArgs e) { UpdateLegend(); PaintPlan(); }
-    private void CalendarToggleClick(object sender,RoutedEventArgs e) => CalendarPanel.IsExpanded=!CalendarPanel.IsExpanded;
     private void HistoryClick(object sender,RoutedEventArgs e)
     {
         if(vm.Session is null)return;
@@ -242,7 +242,7 @@ public partial class MainWindow
         if(window.ShowDialog()!=true || window.Choice is null || !ReferenceEquals(vm.Session,session) || session.Revision!=revision)return;
         if (SpecialCover.IsSpecial(window.Choice.Id))
         {
-            if (!CalendarReady) { ActionHint.Text = "날짜 설정을 확인하세요."; return; }
+            if (!CalendarReady) { ActionHint.Text = "작업 기간을 확인하세요."; return; }
             if (!ConfirmConsecutivePlan(ChangePlanner.AssignTeacher(session, id, window.Choice.Id))) return;
             var result = session.ApplySpecialCover(id, window.Choice.Id, revision);
             if (!result.IsValid) { ActionHint.Text = string.Join(" ", result.Issues.Select(x => x.Message)); return; }

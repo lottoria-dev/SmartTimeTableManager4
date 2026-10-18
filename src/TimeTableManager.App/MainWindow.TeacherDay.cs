@@ -78,7 +78,7 @@ public partial class MainWindow
         changingMode = true; workMode = WorkMode.Auto; WorkModes.SelectedIndex = (int)workMode; changingMode = false;
         SetDirectionChecks(picker.Direction); vm.Select(lessons[0].Id); UpdateWorkflowControls(); PaintPlan();
         var request = new TeacherDayRequest(teacherId, date, goal, picker.MorningLastPeriod, picker.Direction, picker.SpillOverflow);
-        var scope = MonthlyTimetable.WorkingSlots(session.Document).Select(x => x.Id).ToHashSet();
+        var scope = WorkPeriod.EditableSlots(session.Document).Select(x => x.Id).ToHashSet();
         var requested = lessons.Select(x => x.Id).ToHashSet();
         var restrictions = new AutomaticSearchRestrictions();
         using var cancellation = new CancellationTokenSource(); searchCancellation = cancellation;

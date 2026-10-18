@@ -3,7 +3,7 @@ using TimeTableManager.Domain;
 
 namespace TimeTableManager.Application;
 
-/// <summary>One continuous ledger. Month changes extend dates; never cut history or duplicate overlapping lessons.</summary>
+/// <summary>Continuous dated ledger. MonthlySchedule is retained as a legacy pattern anchor, not an edit boundary.</summary>
 public static class MonthlyTimetable
 {
     public static DateOnly MonthOf(DateOnly date) => new(date.Year, date.Month, 1);
@@ -18,10 +18,15 @@ public static class MonthlyTimetable
         while (next.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) next = next.AddDays(1);
         return (start, ScheduleCalendar.MondayOf(next).AddDays(6));
     }
-    public static IEnumerable<TimeSlot> WorkingSlots(ProjectDocument doc, bool boundary = true)
+    public static IEnumerable<TimeSlot> ActiveSlots(ProjectDocument doc)
     {
         var periods = DayTemplatePlanner.PeriodCounts(doc);
-        var active = doc.Current.Slots.Where(x => x.Day <= 5 && (doc.Calendar is not { } dates || x.Period <= periods.GetValueOrDefault(dates.DateOf(x))));
+        return doc.Current.Slots.Where(x => x.Day <= 5 && (doc.Calendar is not { } dates || x.Period <= periods.GetValueOrDefault(dates.DateOf(x))));
+    }
+    public static IEnumerable<TimeSlot> WorkingSlots(ProjectDocument doc, bool boundary = true)
+    {
+        var active = ActiveSlots(doc);
+        if (doc.SchemaVersion >= 6) return active;
         if (doc.Monthly is not { } monthly || doc.Calendar is not { } calendar) return active;
         var range = Window(monthly.Month);
         return active.Where(x => boundary
@@ -36,17 +41,30 @@ public static class MonthlyTimetable
     }
     public static ProjectDocument EnsureMonth(ProjectDocument source, DateOnly requested)
     {
-        DocumentIntegrity.EnsureValid(source);
         var month = MonthOf(requested);
-        if (month.Year is < 1901 or > 9998) throw new InvalidOperationException("관리 월은 1901~9998년 범위에서 선택하세요.");
-        var range = Window(month);
+        return EnsureCoverage(source, Window(month), month, rolling: false);
+    }
+    public static ProjectDocument EnsureDates(ProjectDocument source, DateOnly start, DateOnly end, DateOnly? month = null)
+    {
+        if (start > end || start.Year is < 1901 or > 9998 || end.Year is < 1901 or > 9998)
+            throw new InvalidOperationException("조회 날짜는 1901~9998년 범위에서 선택하세요.");
+        if (source.History.Any(x => x.DayTemplate is not null) || source.TemplateSlotIds is not null)
+            source = SchoolPlanRebaser.Apply(source);
+        return EnsureCoverage(source, (ScheduleCalendar.MondayOf(start), ScheduleCalendar.MondayOf(end).AddDays(6)),
+            month ?? source.Monthly?.Month ?? MonthOf(start), rolling: true);
+    }
+    private static ProjectDocument EnsureCoverage(ProjectDocument source, (DateOnly Start, DateOnly End) range, DateOnly month, bool rolling)
+    {
+        DocumentIntegrity.EnsureValid(source);
+        if (month.Year is < 1901 or > 9998) throw new InvalidOperationException("조회 월은 1901~9998년 범위에서 선택하세요.");
+        if (source.Baseline.Slots.IsEmpty) throw new InvalidOperationException("기초 시간표의 수업 시간이 비어 있습니다.");
         var calendar = source.Calendar ?? new ScheduleCalendar(ScheduleCalendar.MondayOf(month), range.Start);
         var allocated = (source.TemplateSlotIds ?? []).ToHashSet();
         var originalPattern = DayTemplatePlanner.OriginalPattern(source);
         var monthly = source.Monthly ?? new MonthlySchedule(month, calendar.FirstWeekMonday, originalPattern, Guid.NewGuid());
         var pattern = monthly.Pattern;
         if (pattern.Slots.IsEmpty || pattern.Slots.Any(x => x.Week is < 1 or > 4))
-            throw new InvalidOperationException("월 반복에는 1~4주의 기초 시간표가 필요합니다.");
+            throw new InvalidOperationException("반복 배치에는 1~4주의 기초 시간표가 필요합니다.");
         int cycle = pattern.Slots.Max(x => x.Week);
         if (Enumerable.Range(1, cycle).Any(w => !pattern.Slots.Any(x => x.Week == w)))
             throw new InvalidOperationException("기초 시간표의 주차가 연속적이지 않습니다.");
@@ -72,7 +90,7 @@ public static class MonthlyTimetable
                 string id = Guid.NewGuid().ToString("N");
                 slots.Add(slot with { Id = id, Week = week });
                 lessons.AddRange(bySlot[slot.Id].Select(x => x with
-                { Id = Guid.NewGuid().ToString("N"), SlotId = id, Source = x.Source + " (월 반복)" }));
+                { Id = Guid.NewGuid().ToString("N"), SlotId = id, Source = x.Source + " (주간 반복)" }));
                 blocks.AddRange(blocksBySlot[slot.Id].Select(x => x with { SlotId = id }));
             }
         }
@@ -81,7 +99,9 @@ public static class MonthlyTimetable
         { Slots = allSlots, Lessons = state.Lessons.AddRange(lessons), Blocks = state.Blocks.AddRange(blocks) };
         var next = source with
         {
-            SchemaVersion = Math.Max(3, source.SchemaVersion), Calendar = calendar with { FirstWeekMonday = first },
+            SchemaVersion = Math.Max(rolling ? 6 : 3, source.SchemaVersion), Calendar = calendar with { FirstWeekMonday = first },
+            OriginalPattern = rolling ? source.OriginalPattern ?? originalPattern : source.OriginalPattern,
+            BaseDayPlans = rolling ? source.BaseDayPlans ?? [] : source.BaseDayPlans,
             Monthly = monthly with { Month = month, CoverageId = source.Monthly is null || slots.Count != source.Baseline.Slots.Length || shift != 0 ? Guid.NewGuid() : monthly.CoverageId },
             Baseline = Extend(source.Baseline), Current = Extend(source.Current),
             History = source.History.Select(x => x.DayTemplate is { } day ? x with { DayTemplate = day with

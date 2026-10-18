@@ -7,66 +7,79 @@ namespace TimeTableManager.App;
 
 public partial class MainWindow
 {
-    private void LoadCalendarControls(ProjectSession session)
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly viewedMonth = MonthlyTimetable.MonthOf(DateOnly.FromDateTime(DateTime.Today));
+
+    private void LoadCalendarControls(ProjectSession session, bool showMonth = false)
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var calendar = session.Document.Calendar ?? new ScheduleCalendar(ScheduleCalendar.MondayOf(today), today);
-        session.SetCalendar(calendar);
-        FirstWeekDate.SelectedDate = calendar.FirstWeekMonday.ToDateTime(TimeOnly.MinValue);
-        WorkDate.SelectedDate = calendar.EditableFrom.ToDateTime(TimeOnly.MinValue);
-        var weeks = session.Document.Current.Slots.Select(x => x.Week).Distinct().Order().ToArray();
-        var monthly = session.Document.Monthly is not null;
-        WeekFilter.ItemsSource = new[] { new Option("-1", "오늘~다음 주 금") }
-            .Concat(monthly ? new[] { new Option("-2", "관리 월 전체"), new Option("-3", "관리 월＋인접 주"), new Option("0", "저장된 전체 기간") }
-                : new[] { new Option("0", "전체 주차") })
-            .Concat(weeks.Where(w => !monthly || MonthlyTimetable.WorkingSlots(session.Document).Any(x => x.Week == w))
-                .Select(w => new Option(w.ToString(), $"{calendar.FirstWeekMonday.AddDays((w - 1) * 7):M/d} 시작 주"))).ToArray();
-        WeekFilter.SelectedIndex = 0;
-        FirstWeekDate.IsEnabled = !monthly;
-        RepeatTwoWeeks.Visibility = monthly ? Visibility.Collapsed : Visibility.Visible;
-        RepeatTwoWeeks.IsEnabled = !monthly && weeks.Length == 1 && weeks[0] == 1;
+        var calendar = session.Document.Calendar!;
+        WorkHorizon.ItemsSource = Enumerable.Range(0, 4).Select(weeks => new Option(weeks.ToString(),
+            $"{(weeks == 0 ? "이번 주" : weeks + "주 후")} 금요일까지 ({BoardDateRange.Friday(Today, weeks):M/d})")).ToArray();
+        WorkHorizon.SelectedIndex = calendar.WeeksAhead;
+        WeekFilter.ItemsSource = new[] { new Option("-1", "작업 기간 보기"), new Option("-2", $"{viewedMonth:yyyy년 M월} 전체") };
+        WeekFilter.SelectedIndex = showMonth ? 1 : 0;
+        vm.DisplayMonth = viewedMonth;
         UpdateCalendarHint();
     }
     private void UpdateCalendarHint()
     {
         if (vm.Session?.Document.Calendar is not { } calendar) return;
-        var last = vm.Session.Document.Current.Slots.Max(x => calendar.DateOf(x));
-        CalendarHint.Text = vm.Session.Document.Monthly is { } monthly
-            ? $"관리 {monthly.Month:yyyy년 M월} · 편집 허용 시작일 {calendar.EditableFrom:M/d} · 이전 날짜는 교체 제외"
-            : $"1주 월요일 {calendar.FirstWeekMonday:yyyy/M/d} · 자료 마지막 날 {last:M/d} · 편집 허용 시작일 이전은 교체 제외";
+        CalendarHint.Text = calendar.EditableUntil < calendar.EditableFrom
+            ? "이번 주 작업일이 지났습니다. 1주 후 이상을 선택하세요."
+            : $"{calendar.EditableFrom:yyyy/M/d}~{calendar.EditableUntil:M/d} 편집 · 기간 밖은 조회만";
     }
-    private bool CalendarReady => FirstWeekDate.SelectedDate is { } first && WorkDate.SelectedDate is { } cutoff &&
-        vm.Session?.Document.Calendar is { } calendar && calendar.FirstWeekMonday == ScheduleCalendar.MondayOf(DateOnly.FromDateTime(first)) &&
-        calendar.EditableFrom == DateOnly.FromDateTime(cutoff);
+    private bool CalendarReady => vm.Session?.Document.Calendar is { } calendar && calendar.EditableFrom == Today &&
+        calendar.EditableUntil == BoardDateRange.Friday(Today, calendar.WeeksAhead) &&
+        WorkHorizon.SelectedItem is Option selected && selected.Id == calendar.WeeksAhead.ToString();
     private bool EditableSlot(string slotId) => CalendarReady && vm.Session?.Document.Calendar is { } calendar &&
         vm.Session.Document.Current.Slots.FirstOrDefault(x => x.Id == slotId) is { } slot && calendar.CanEdit(slot);
-    private void CalendarChanged(object? sender, SelectionChangedEventArgs e)
+
+    private async void WorkHorizonChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (refreshing || busy || !IsInitialized || vm.Session is null) return;
-        if (FirstWeekDate.SelectedDate is not { } first || WorkDate.SelectedDate is not { } cutoff)
-        {
-            vm.CancelPreview(); PaintPlan();
-            ActionHint.Text = "1주 시작일과 편집 허용 시작일을 모두 선택하세요.";
-            return;
-        }
+        if (refreshing || busy || !IsInitialized || vm.Session is null || WorkHorizon.SelectedItem is not Option option) return;
+        await RefreshWorkPeriod(int.Parse(option.Id), true);
+    }
+    private async Task RefreshWorkPeriod(int? requested = null, bool showWorkingPeriod = false)
+    {
+        if (busy || manualDraft is not null || lockSelectionMode || vm.Session is not { } session) return;
+        var weeks = requested ?? session.Document.Calendar?.WeeksAhead ?? WorkPeriod.DefaultWeeksAhead;
+        var showMonth = !showWorkingPeriod && WeekFilter.SelectedItem is Option { Id: "-2" };
         try
         {
-            var calendar = new ScheduleCalendar(ScheduleCalendar.MondayOf(DateOnly.FromDateTime(first)), DateOnly.FromDateTime(cutoff));
-            vm.Session.SetCalendar(calendar);
+            CancelInteraction(); SetBusy(true);
+            await Task.Run(() => session.SetWorkPeriod(Today, weeks));
+            if (!ReferenceEquals(vm.Session, session)) return;
+            if (viewedMonth != MonthlyTimetable.MonthOf(Today) && showWorkingPeriod) viewedMonth = MonthlyTimetable.MonthOf(Today);
             refreshing = true;
-            FirstWeekDate.SelectedDate = calendar.FirstWeekMonday.ToDateTime(TimeOnly.MinValue);
+            LoadCalendarControls(session, showMonth); vm.Refresh();
             refreshing = false;
-            vm.Refresh(); RefreshGrid(); UpdateCalendarHint();
+            RefreshGrid();
+            ActionHint.Text = WorkPeriod.EditableSlots(session.Document).Any()
+                ? $"작업 기간을 {session.Document.Calendar!.EditableUntil:M/d}까지로 설정했습니다. 다음 달 날짜도 이어서 편집합니다."
+                : "이번 주 금요일이 지났습니다. 작업 기간에서 1주 후 이상을 선택하세요.";
         }
         catch (Exception ex)
         {
             refreshing = true;
-            if (vm.Session.Document.Calendar is { } restored)
-            { FirstWeekDate.SelectedDate = restored.FirstWeekMonday.ToDateTime(TimeOnly.MinValue); WorkDate.SelectedDate = restored.EditableFrom.ToDateTime(TimeOnly.MinValue); }
+            WorkHorizon.SelectedIndex = session.Document.Calendar?.WeeksAhead ?? WorkPeriod.DefaultWeeksAhead;
             refreshing = false; Error(ex);
         }
+        finally { refreshing = false; SetBusy(false); }
     }
-    private void TodayClick(object sender, RoutedEventArgs e) => WorkDate.SelectedDate = DateTime.Today;
+    private async void WorkPeriodViewClick(object sender, RoutedEventArgs e)
+    {
+        if (busy || manualDraft is not null || vm.Session is null) return;
+        if (vm.Session.Document.Calendar?.EditableFrom != Today) await RefreshWorkPeriod(showWorkingPeriod: true);
+        else WeekFilter.SelectedIndex = 0;
+    }
+    private async void CurrentMonthViewClick(object sender, RoutedEventArgs e)
+    {
+        if (busy || manualDraft is not null || vm.Session is null) return;
+        if (vm.Session.Document.Calendar?.EditableFrom != Today) await RefreshWorkPeriod();
+        viewedMonth = MonthlyTimetable.MonthOf(Today);
+        refreshing = true; LoadCalendarControls(vm.Session, true); vm.Refresh(); refreshing = false;
+        RefreshGrid(); ActionHint.Text = "이번 달 전체 조회 · 오늘 이전과 작업 기간 밖의 수업은 조회만 가능합니다.";
+    }
     private void DirectionChanged(object sender, RoutedEventArgs e)
     {
         if (!IsInitialized || refreshing || busy) return;
@@ -77,19 +90,7 @@ public partial class MainWindow
             RefreshManualBoard(); return;
         }
         vm.CancelPreview(); UpdateWorkflowControls(); PaintPlan();
-        ActionHint.Text = Direction == SwapDirection.SameDay ? "당일 안에서만 교체안을 찾습니다. 지정 목적은 유지합니다." : "당일 우선 → 같은 달 → 인접 주 순서로 허용 날짜를 넓힙니다. 밀려나는 수업도 같은 제한을 따릅니다.";
-    }
-    private async void RepeatTwoWeeksClick(object sender, RoutedEventArgs e)
-    {
-        if (busy || vm.Session is null) return;
-        try
-        {
-            var copy = ProjectRepetition.CreateTwoWeekCopy(vm.Session.Document);
-            if (!await MayAbandon()) return;
-            projectFile?.Dispose(); projectFile = null;
-            Attach(new ProjectSession(copy));
-            ActionHint.Text = "2주 반복본을 만들었습니다. 1주 변경 이력은 유지하며 2주는 기초 원본을 반복합니다. 새 파일로 저장하세요.";
-        }
-        catch (Exception ex) { Error(ex); }
+        ActionHint.Text = Direction == SwapDirection.SameDay ? "당일 안에서만 교체안을 찾습니다. 지정 목적은 유지합니다."
+            : "선택한 작업 기간 안에서 당일 우선 → 가까운 이전·이후 날짜로 넓힙니다. 밀려나는 수업도 같은 제한을 따릅니다.";
     }
 }

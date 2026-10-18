@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TimeTableManager.Application;
 using TimeTableManager.Domain;
@@ -20,7 +21,9 @@ public sealed class MainViewModel : ObservableObject
     public string SelectedSummary { get => selectedSummary; set => SetProperty(ref selectedSummary, value); }
     public string? SelectedLessonId { get; private set; }
     public ObservableCollection<Option> Teachers { get; } = [];
-    public string Title => $"{Session?.Document.Name ?? "새 프로젝트"}{(Session?.IsDirty == true ? " *" : "")} · Smart Timetable Manager 4 · 4.0.3{(Session?.Document.Monthly is { } monthly ? $" · {monthly.Month:yyyy년 M월}" : "")}";
+    public DateOnly DisplayMonth { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    private static readonly string Version = typeof(MainViewModel).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "4";
+    public string Title => $"{Session?.Document.Name ?? "새 프로젝트"}{(Session?.IsDirty == true ? " *" : "")} · Smart Timetable Manager 4 · {Version} · {DisplayMonth:yyyy년 M월} 조회";
     private bool groupPreviewByTeacher;
     public bool GroupPreviewByTeacher
     {

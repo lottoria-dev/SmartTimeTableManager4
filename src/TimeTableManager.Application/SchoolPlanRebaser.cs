@@ -97,7 +97,7 @@ public static class SchoolPlanRebaser
             throw new InvalidDataException("기초 배정 갱신 전후의 다른 날짜 수업이 일치하지 않습니다.");
         var result = document with
         {
-            SchemaVersion = 5, OriginalPattern = pattern, BaseDayPlans = planned.Values.OrderBy(x => x.Date).ToImmutableArray(),
+            SchemaVersion = Math.Max(5, document.SchemaVersion), OriginalPattern = pattern, BaseDayPlans = planned.Values.OrderBy(x => x.Date).ToImmutableArray(),
             TemplateSlotIds = null, Baseline = baseline, Current = current, InitialStateId = initial, CurrentStateId = currentId,
             History = rebuilt.ToImmutable(), HistoryCursor = rebuilt.Count
         };

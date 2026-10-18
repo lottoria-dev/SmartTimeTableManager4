@@ -1,4 +1,4 @@
-Smart Timetable Manager 4
+Smart Timetable Manager 4 · 4.1.0
 개발: MathTime
 
 한국 학교의 수업 교체·보강 전용 프로그램입니다.
@@ -8,11 +8,14 @@ Smart Timetable Manager 4
 1. 배포 ZIP을 새 폴더에 압축 해제.
 2. TimeTableManager.exe 실행.
 3. templates의 동일셀·분리셀 Excel 중 하나를 학교 자료로 편집.
-4. 파일 → 시간표 파일 열기. 작업은 .ttm으로 저장.
+4. 파일 → 시간표 파일 열기 → 작업 기간 선택. 작업은 .ttm으로 저장.
+5. 기본은 오늘~1주 후 금요일. 이번 주·2주 후·3주 후로 변경 가능.
 
 주요 기능
 - 조회 / 맞교환 / 보강 / 수동 교체 / AI 자동.
-- 수업 잠금·학년 행사 제외·변경 다이어그램·월별 결보강 통계.
+- 수업 잠금·학년 행사 제외·변경 다이어그램.
+- 월 전체 조회 유지. 월별 통계는 제거.
+- 다음 달도 작업 기간에 맞춰 같은 파일에서 이어서 편집.
 - 도움말 → 학교 상황별 활용 / 버전 히스토리.
 
 templates
@@ -30,5 +33,10 @@ templates
 
 배포 ZIP과 함께 제공되는 .sha256.txt 또는 SHA256SUMS.txt로 해시 확인.
 버전별 변경 내역: VERSION_HISTORY.txt.
-공식 안내: https://mathtime.kr/?page=timetable
+공식 안내: https://mathtime.kr/timetable.html
 문의: mathtime.ai@gmail.com
+
+이전 버전과의 호환
+4.0.4 작업 파일 읽기 지원. 4.1.0에서 저장한 파일은 4.0.4에서 열 수 없음.
+기존 작업 파일도 보관. 저장 시 날짜·시각을 붙여 새 파일 생성.
+오늘 이전과 선택한 작업 기간 밖은 조회만 가능.

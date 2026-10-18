@@ -84,7 +84,7 @@ public sealed class ManualChainDraft
         if (placements.TryGetValue(id, out var at))
         {
             if (school.IsExcluded(lesson.ClassId, at)) return "행사 제외 날짜·학년의 수업입니다.";
-            if (!Editable(at)) return "편집 허용 시작일 이전 수업입니다.";
+            if (!Editable(at)) return "오늘 이전이거나 선택한 작업 기간 밖의 수업입니다.";
             if (!AllowsDate(at)) return "이 날짜의 수업을 꺼내려면 이전·이후 날짜 허용 옵션을 켜세요.";
             EnsureIndex();
             if (unknownSlots.Contains(at)) return "같은 시간에 교사 미배정 수업이 있어 가용성을 확인할 수 없습니다.";
@@ -121,7 +121,7 @@ public sealed class ManualChainDraft
     {
         if (session.Revision != revision || ActiveId is not { } id || !slots.TryGetValue(target, out var slot))
             return new(false,false,false,0,"먼저 대기 카드를 선택하세요.");
-        if (!Editable(target)) return new(false,false,false,0,"편집 허용 시작일 이전입니다.");
+        if (!Editable(target)) return new(false,false,false,0,"오늘 이전이거나 선택한 작업 기간 밖입니다.");
         if (checkDirection && !AllowsDate(target)) return new(false,false,false,0,"다른 날짜입니다. 클릭하면 날짜 허용 옵션 변경을 확인합니다.");
         var picked = lessons[id];
         if (school.IsExcluded(picked.ClassId, target)) return new(false,false,false,0,"선택 수업의 학년이 이 날짜에 행사 제외되어 있습니다.");
@@ -135,16 +135,14 @@ public sealed class ManualChainDraft
         // Replacing a conflicting lesson of this teacher at the target keeps that same period occupied.
         bool triple = TeachingAdvice.LongestPeriods(teacherPeriods[(picked.TeacherId!, slot.Week, slot.Day)].Append(slot.Period)) >= 3;
         bool returning = target == ActiveOriginSlotId;
-        bool outsideMonth = session.Document.Monthly is { } monthly && session.Document.Calendar is { } calendar &&
-            !MonthlyTimetable.InMonth(calendar.DateOf(slot), monthly.Month);
         var teachers = original.Teachers;
         var message = conflicts.Length > 0 ? "밀려날 수업: " + string.Join(" / ", conflicts.Select(x =>
             x.Subject + " · " + teachers.Single(t => t.Id == x.TeacherId).Name))
             : returning ? "방금 꺼낸 자리 · 제자리 복귀이며 추천 시간이 아닙니다."
             : "추가로 밀려나는 수업 없음";
         if (returning && conflicts.Length > 0) message = "직전 자리 · 다른 교시를 권장합니다. " + message;
-        return new(true,conflicts.Length == 0 && !triple && !returning && !outsideMonth,triple,conflicts.Length,
-            message + (triple ? " · ! 3연강 이상" : " · 3연강 없음") + (outsideMonth ? " · 인접 월 배치: 관리 월 안의 시간을 우선 권장합니다." : ""));
+        return new(true,conflicts.Length == 0 && !triple && !returning,triple,conflicts.Length,
+            message + (triple ? " · ! 3연강 이상" : " · 3연강 없음"));
     }
     public string? Put(string target)
     {

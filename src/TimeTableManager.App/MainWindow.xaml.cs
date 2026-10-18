@@ -39,9 +39,12 @@ public partial class MainWindow : Window
         DayFilter.ItemsSource = new[] { new Option("0", "모든 요일") }.Concat(
             Enumerable.Range(1, 5).Select(d => new Option(d.ToString(), "월화수목금토일"[d - 1] + "요일"))).ToArray();
         DayFilter.SelectedIndex = 0;
-        FirstWeekDate.SelectedDate = ScheduleCalendar.MondayOf(DateOnly.FromDateTime(DateTime.Today)).ToDateTime(TimeOnly.MinValue);
-        WorkDate.SelectedDate = DateTime.Today;
         refreshing = false;
+        Activated += async (_, _) =>
+        {
+            if (!busy && manualDraft is null && vm.Session?.Document.Calendar is { } dates && dates.EditableFrom != Today)
+                await RefreshWorkPeriod(showWorkingPeriod: true);
+        };
         searchTimer.Tick += (_, _) => { searchTimer.Stop(); ApplySearch(); };
         recoveryTimer.Tick += RecoveryTick;
         recoveryTimer.Start();
@@ -83,16 +86,14 @@ public partial class MainWindow : Window
                 if (chooser.ShowDialog()!=true || chooser.Choice is null) return;
                 document=documents[int.Parse(chooser.Choice.Id)];
             }
-            var monthPicker = new MonthWindow(DateOnly.FromDateTime(DateTime.Today)) { Owner = this };
-            if (monthPicker.ShowDialog() != true) return;
             SetBusy(true);
             var imported = document;
-            document = await Task.Run(() => MonthlyTimetable.EnsureMonth(imported, monthPicker.Month));
+            document = await Task.Run(() => WorkPeriod.Prepare(imported, Today));
             SetBusy(false);
             if (!await MayAbandon()) return;
             projectFile?.Dispose(); projectFile=null;
             Attach(new ProjectSession(document));
-            if (visibleSlots.Count > 0) ActionHint.Text=$"{document.Monthly!.Month:yyyy년 M월} 시간표를 만들었습니다. 편집 허용 시작일과 학년 행사 제외를 확인하세요.";
+            if (visibleSlots.Count > 0) ActionHint.Text=$"오늘부터 {document.Calendar!.EditableUntil:M/d}까지 작업할 수 있습니다. 작업 기간과 학년 행사를 확인하세요.";
         }
         catch(Exception ex){Error(ex);}
         finally{SetBusy(false);}
@@ -111,7 +112,13 @@ public partial class MainWindow : Window
                 nextFile = new ProjectFile(path);
                 doc = await Task.Run(nextFile.Load);
             }
-            var nextSession = new ProjectSession(doc, nextFile is not null);
+            var saved = nextFile is not null;
+            var nextSession = await Task.Run(() =>
+            {
+                var session = new ProjectSession(doc, saved);
+                session.SetWorkPeriod(Today, doc.Calendar?.WeeksAhead ?? WorkPeriod.DefaultWeeksAhead);
+                return session;
+            });
             SetBusy(false);
             if (!await MayAbandon()) return;
             projectFile?.Dispose();
@@ -128,6 +135,7 @@ public partial class MainWindow : Window
         recoveredState = null;
         vm.Attach(session);
         refreshing = true;
+        viewedMonth = MonthlyTimetable.MonthOf(Today);
         LoadCalendarControls(session);
         vm.Refresh();
         refreshing = false;
@@ -143,7 +151,6 @@ public partial class MainWindow : Window
         try
         {
             var path = projectFile?.Path ?? "시간표.ttm";
-            if (vm.Session.Document.Monthly is { } activeMonth) path = TimestampedFileNames.ForMonth(path, activeMonth.Month);
             if (projectFile is null || saveAs)
             {
                 var picker = new SaveFileDialog { Title = "저장 시각을 붙여 새 작업 파일 저장", Filter = "시간표 프로젝트|*.ttm",
@@ -153,7 +160,6 @@ public partial class MainWindow : Window
                 if (picker.ShowDialog(this) != true) return false;
                 path = picker.FileName;
             }
-            if (vm.Session.Document.Monthly is { } savingMonth) path = TimestampedFileNames.ForMonth(path, savingMonth.Month);
             path = TimestampedFileNames.Next(path, DateTime.Now);
             next = new ProjectFile(path);
             var destination = next;
@@ -194,6 +200,8 @@ public partial class MainWindow : Window
     private async void RecoveryTick(object? sender, EventArgs e)
     {
         if (busy || lockSelectionMode || manualDraft is not null || dragActive || (pressedCell is not null && Mouse.LeftButton == MouseButtonState.Pressed) || !IsActive || vm.Session is null) return;
+        if (vm.Session.Document.Calendar?.EditableFrom != Today) await RefreshWorkPeriod(showWorkingPeriod: true);
+        if (busy || vm.Session is null) return;
         if (!vm.Session.IsDirty) { if (recoveredState is not null) DeleteRecovery(); return; }
         if (recoveredSchema == vm.Session.Document.SchemaVersion && recoveredBaselineSlots == vm.Session.Document.Baseline.Slots.Length && recoveredState == vm.Session.Document.CurrentStateId && recoveredCalendar == vm.Session.Document.Calendar && recoveredMonthly == vm.Session.Document.Monthly && recoveredExclusions.SequenceEqual(SchoolDayRules.Entries(vm.Session.Document))) return;
         try

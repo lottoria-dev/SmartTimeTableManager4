@@ -84,7 +84,7 @@ public static class DayTemplatePlanner
         var document = session.Document; var calendar = document.Calendar;
         if (calendar is null || date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday || sourceDay is < 1 or > 5)
             return new(null, "변경 날짜와 기초 요일(월~금)을 확인하세요.");
-        if (date < calendar.EditableFrom) return new(null, "편집 허용 시작일 이전 날짜입니다.");
+        if (!calendar.CanEdit(date)) return new(null, "오늘 이전이거나 선택한 작업 기간 밖입니다.");
         var state = document.Current;
         var at = state.Slots.Where(x => calendar.DateOf(x) == date).ToDictionary(x => x.Period);
         if (at.Count == 0) return new(null, "선택 날짜가 저장된 시간표 범위 밖입니다.");

@@ -53,7 +53,7 @@ public static class TeacherDaySearch
                 Add(days.Where(x => Math.Abs(x.DayNumber - request.Date.DayNumber) <= group.Key));
             }
         }
-        if (scopes.Count == 0) return new(null, "허용한 범위에 다른 평일이 없습니다. 날짜 옵션·관리 월·편집 허용 시작일을 확인하세요.", 0);
+        if (scopes.Count == 0) return new(null, "허용한 범위에 다른 평일이 없습니다. 작업 기간과 이전·이후 날짜 옵션을 확인하세요.", 0);
         int examined = 0;
         SwapSearchResult? firstFailure = null;
         var watch = Stopwatch.StartNew();
@@ -107,7 +107,7 @@ public static class TeacherDaySearch
         var direction = request.Goal is (TeacherDayGoal.OtherDates or TeacherDayGoal.ClearMorning) || request.SpillOverflow ? request.Direction : SwapDirection.SameDay;
         var scope = original.Slots.Where(x => available.Contains(x.Id) && CalendarSwapSearch.Allows(calendar, origin, x, direction))
             .Select(x => x.Id).ToHashSet();
-        if (dayLessons.Any(x => !scope.Contains(x.SlotId))) return new(null, "선택한 날이 편집 허용 시작일 이전이거나 탐색 범위 밖입니다.", 0);
+        if (dayLessons.Any(x => !scope.Contains(x.SlotId))) return new(null, "선택한 날이 오늘 이전이거나 작업 기간 밖입니다.", 0);
         var goals = dayLessons.Select(x => x.Id).ToHashSet();
         var school = new SchoolDayRules(document);
         var blocked = dayLessons.Where(x => !Target(slots[x.SlotId]) && (x.Locked || school.IsExcluded(x))).ToArray();
@@ -199,7 +199,6 @@ public static class TeacherDaySearch
                             .ThenBy(x => relocating ? DestinationRun(state, lesson, x) : 0)
                             .ThenBy(x => relocating ? state.Lessons.Count(l => l.TeacherId == request.TeacherId && calendar.DateOf(slots[l.SlotId]) == calendar.DateOf(x)) : 0)
                             .ThenBy(x => Math.Abs(calendar.DateOf(x).DayNumber - request.Date.DayNumber))
-                            .ThenBy(x => document.Monthly is { } month && !MonthlyTimetable.InMonth(calendar.DateOf(x), month.Month) ? 1 : 0)
                             .ThenBy(x => Math.Abs(x.Period - slots[lesson.SlotId].Period)).ThenBy(x => x.Period).ToArray();
                         int produced = 0;
                         foreach (bool chains in new[] { false, true })

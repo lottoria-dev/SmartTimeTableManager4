@@ -10,7 +10,6 @@ $buildExitCode = 0
 $workDirectory = $null
 try {
     Write-Host 'Smart Timetable Manager 4 - Release builder'
-    & (Join-Path $PSScriptRoot 'Export-PublicSource.ps1') -ValidateOnly
     if (-not $SkipPublish) {
         if (-not [string]::IsNullOrWhiteSpace($PublishDirectory)) {
             throw 'Use -SkipPublish with -PublishDirectory, or omit -PublishDirectory to build.'
@@ -22,15 +21,14 @@ try {
         $PublishDirectory = Join-Path $workDirectory 'publish'
         New-Item -ItemType Directory -Path $PublishDirectory -Force | Out-Null
         $project = Join-Path $repoRoot 'src\TimeTableManager.App\TimeTableManager.App.csproj'
-        Write-Host '[1/3] Publishing self-contained Windows x64 executable...'
+        Write-Host '[1/2] Publishing self-contained Windows x64 executable...'
         & dotnet publish $project -p:PublishProfile=Standalone-win-x64 -c Release -r win-x64 --self-contained true --output $PublishDirectory
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed (exit $LASTEXITCODE). No release was packaged." }
     }
-    Write-Host '[2/3] Packaging README, licenses, history, templates and SHA-256...'
+    Write-Host '[2/2] Packaging README, licenses, history, templates and SHA-256...'
     & (Join-Path $PSScriptRoot 'Package-Release.ps1') -PublishDirectory $PublishDirectory -Force:$Force
-    Write-Host '[3/3] Exporting public source from the explicit file list...'
-    & (Join-Path $PSScriptRoot 'Export-PublicSource.ps1') -Force:$Force
-    Write-Host 'Completed. Public files: artifacts\public'
+    Write-Host 'Completed. Runtime packages: artifacts\release or artifacts\preview (version folder).'
+    Write-Host 'Source export is separate: export_public_source.cmd (only when explicitly needed).'
     Write-Host 'Extract the release ZIP in a separate folder and test it before uploading.'
 }
 catch {

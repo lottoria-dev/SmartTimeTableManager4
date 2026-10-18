@@ -114,7 +114,7 @@
       "timetablemanager.application": {
         "type": "Project",
         "dependencies": {
-          "TimeTableManager.Domain": "[4.0.3, )"
+          "TimeTableManager.Domain": "[4.1.0, )"
         }
       },
       "timetablemanager.domain": {

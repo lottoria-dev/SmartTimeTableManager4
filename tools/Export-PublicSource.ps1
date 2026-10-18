@@ -31,8 +31,8 @@ foreach ($folder in @('src','tests')) {
 if ($ValidateOnly) { Write-Output 'Public source file list validated.'; return }
 [xml]$props = Get-Content -LiteralPath (Join-Path $repoRoot 'Directory.Build.props') -Encoding UTF8 -Raw
 $version = [string]$props.Project.PropertyGroup.Version
-if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Set a stable version before exporting.' }
-$output = Join-Path $repoRoot 'artifacts\public'
+if ($version -notmatch '^\d+\.\d+\.\d+(?:-preview\.\d+)?$') { throw 'Set a stable or preview version before exporting.' }
+$output = Join-Path $repoRoot ('artifacts\source\' + $version)
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $zipPath = Join-Path $output "SmartTimeTableManager4-$version-GitHub.zip"
 $hashPath = Join-Path $output "SmartTimeTableManager4-$version-GitHub.sha256.txt"
@@ -85,12 +85,7 @@ try {
     Move-Item -LiteralPath $temporaryZip -Destination $zipPath -Force:$Force
     [IO.File]::WriteAllText($hashPath,$line + "`n",$encoding)
     $sumsPath = Join-Path $output 'SHA256SUMS.txt'
-    $sums = @()
-    if (Test-Path -LiteralPath $sumsPath) {
-        $suffix = '  ' + [IO.Path]::GetFileName($zipPath)
-        $sums = @(Get-Content -LiteralPath $sumsPath -Encoding UTF8 | Where-Object { $_ -and -not $_.EndsWith($suffix) })
-    }
-    [IO.File]::WriteAllText($sumsPath,((@($sums) + @($line)) -join "`n") + "`n",$encoding)
+    [IO.File]::WriteAllText($sumsPath,$line + "`n",$encoding)
     Write-Output $zipPath
     Write-Output $hashPath
 }

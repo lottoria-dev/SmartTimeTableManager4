@@ -46,7 +46,7 @@ public partial class MainWindow
         if (manualDraft is not { } draft || vm.Session?.Document.Calendar is not { } calendar) return false;
         var slots = vm.Session.Document.Current.Slots.ToDictionary(x => x.Id);
         var dates = slotIds.Distinct().Select(id => slots[id]).ToArray();
-        if (dates.Any(x => !calendar.CanEdit(x))) { ActionHint.Text = "편집 허용 시작일 이전은 날짜 허용으로 해제할 수 없습니다."; return false; }
+        if (dates.Any(x => !calendar.CanEdit(x))) { ActionHint.Text = "오늘 이전과 작업 기간 밖은 날짜 허용 옵션으로 해제할 수 없습니다."; return false; }
         if (draft.DateAnchorSlotId is not { } anchor || dates.All(x => draft.AllowsDate(x.Id))) return true;
         var date = calendar.DateOf(slots[anchor]);
         bool earlier = AllowEarlier.IsChecked == true || dates.Any(x => calendar.DateOf(x) < date);
@@ -56,7 +56,7 @@ public partial class MainWindow
         var revision = vm.Session.Revision;
         if (!ShowWorkDialog(new ReviewWindow("다른 날짜 이동 허용", $"{text} 교체를 허용하고 수동 작업을 계속할까요?",
             $"처음 선택한 수업 날짜: {date:yyyy/M/d}\n선택한 시간: {string.Join(" / ", dates.Select(calendar.Label))}", "옵션 변경 후 계속",
-            "• 날짜 허용은 연쇄 참여 수업 전체에 적용\n• 잠금·행사 제외·편집 허용 시작일 유지")))
+            "• 날짜 허용은 연쇄 참여 수업 전체에 적용\n• 잠금·행사 제외·작업 기간 유지")))
         { ActionHint.Text = "날짜 옵션과 대기 카드를 유지했습니다. 다른 목적 시간을 선택하세요."; return false; }
         if (!ReferenceEquals(manualDraft, draft) || vm.Session.Revision != revision) return false;
         var error = draft.SetDirection(next);
@@ -104,7 +104,7 @@ public partial class MainWindow
             choices.Add(new(direction.ToString(), direction == SwapDirection.Later ? "이후 날짜 포함" : direction == SwapDirection.Earlier ? "이전 날짜 포함" : "이전·이후 모두 포함"));
         }
         if (choices.Count == 0) return null;
-        var dialog = new ChoiceWindow("다른 날짜를 포함해 재탐색", $"선택 수업 날짜 {calendar.DateOf(origin):M/d} 안에서 교체안을 찾지 못했습니다. 이 날짜의 이전·이후를 포함할까요? 지정한 목적 시간은 유지하며 편집 허용 시작일 이전은 제외합니다.", choices, "옵션 적용 후 재탐색");
+        var dialog = new ChoiceWindow("다른 날짜를 포함해 재탐색", $"선택 수업 날짜 {calendar.DateOf(origin):M/d} 안에서 교체안을 찾지 못했습니다. 이 날짜의 이전·이후를 포함할까요? 지정한 목적 시간은 유지하며 오늘 이전과 선택한 작업 기간 밖은 제외합니다.", choices, "옵션 적용 후 재탐색");
         return ShowWorkDialog(dialog) && dialog.Choice is { } choice ? Enum.Parse<SwapDirection>(choice.Id) : null;
     }
 }

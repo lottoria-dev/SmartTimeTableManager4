@@ -74,10 +74,8 @@ public partial class MainWindow
             var calendar = vm.Session.Document.Calendar!;
             var day = DayFilter.SelectedItem is Option d ? int.Parse(d.Id) : 0;
             bool teachers = ViewMode.SelectedIndex == 0;
-            var monthSlots = MonthlyTimetable.WorkingSlots(vm.Session.Document, week == -3).Select(x => x.Id).ToHashSet();
             var periods = DayTemplatePlanner.PeriodCounts(vm.Session.Document);
-            var today = DateOnly.FromDateTime(DateTime.Today);
-            var nextSlots = s.Slots.Where(x => (week is -2 or -3 ? monthSlots.Contains(x.Id) : week == -1 ? BoardDateRange.IsDefaultVisible(calendar.DateOf(x), today) : week == 0 || x.Week == week)
+            var nextSlots = s.Slots.Where(x => (week == -2 ? MonthlyTimetable.InMonth(calendar.DateOf(x), viewedMonth) : calendar.CanEdit(x))
                     && x.Day <= 5 && x.Period <= periods.GetValueOrDefault(calendar.DateOf(x)) && (day == 0 || x.Day == day))
                 .OrderBy(x => x.Week).ThenBy(x => x.Day).ThenBy(x => x.Period).ToList();
             bool sameColumns = renderedProjectId == vm.Session.Document.ProjectId && renderedTeachers == teachers &&
@@ -140,7 +138,7 @@ public partial class MainWindow
                     SearchText = $"{row.Label} {cls} {teacher} {lesson?.Subject}",
                     Text = displayText,
                     Hint = (lesson is null ? $"{row.Label} · {calendar.Label(slot)} · {(heldOrigin ? "대기 수업의 원래 자리 · 선택 유지 · 다른 교시에 배치하세요" : changed ? "원래 수업이 이동된 자리" : "빈 칸")}{departureHint}"
-                        : $"{cls} · {calendar.Label(slot)}\n{lesson.Subject} / {teacher}{coverHint}{(lesson.Locked ? "\n잠긴 수업" : "")}{(changed ? "\n기초 시간표에서 변경됨" : "")}{(past ? "\n편집 허용 시작일 이전 · 교체 제외" : "")}")
+                        : $"{cls} · {calendar.Label(slot)}\n{lesson.Subject} / {teacher}{coverHint}{(lesson.Locked ? "\n잠긴 수업" : "")}{(changed ? "\n기초 시간표에서 변경됨" : "")}{(past ? "\n작업 기간 밖 · 조회만 가능" : "")}")
                         + (excluded ? "\n학년 행사 제외 · 이동/보강/새 배치 불가" : "") + impact
                         + (manualTarget && placementAdvice.TryGetValue(slot.Id, out var advice) ? "\n선택한 대기 카드 기준: " + advice.Message : ""),
                     BaseFill = covered ? CoverFill : changed ? ChangedFill : WeekdayFill(slot.Day)
@@ -180,7 +178,7 @@ public partial class MainWindow
             renderedProjectId = vm.Session.Document.ProjectId; renderedTeachers = teachers; renderedMonday = calendar.FirstWeekMonday;
             searchTimer.Stop();
             ApplySearch();
-            ActionHint.Text = visibleSlots.Count == 0 ? "오늘~다음 주 금요일에 해당하는 자료가 없습니다. 조회 범위에서 관리 월 전체·전체 기간 또는 시작 주를 선택하세요." : workMode == WorkMode.Browse && ChangedRowsOnly.IsChecked == true && boardRows.Count == 0 ? "현재 조회 범위에 변경된 행이 없습니다." : ModeGuide;
+            ActionHint.Text = visibleSlots.Count == 0 ? "현재 기간에 표시할 평일 수업이 없습니다. 작업 기간을 늘리거나 월 전체 조회를 선택하세요." : workMode == WorkMode.Browse && ChangedRowsOnly.IsChecked == true && boardRows.Count == 0 ? "현재 조회 범위에 변경된 행이 없습니다." : ModeGuide;
         }
         finally { refreshing = false; UpdateWorkflowControls(); }
     }
@@ -304,7 +302,7 @@ public partial class MainWindow
         }
         if (vm.Session?.Document.Current.Lessons.FirstOrDefault(x => x.Id == id) is not { } lesson) return;
         if (workMode != WorkMode.Browse && (!EditableSlot(lesson.SlotId) || lesson.Locked || new SchoolDayRules(vm.Session.Document).IsExcluded(lesson)))
-        { ActionHint.Text = "잠금·지난 날짜·학년 행사 제외 수업은 교체할 수 없습니다. 조회 모드에서는 확인할 수 있습니다."; return; }
+        { ActionHint.Text = "잠금·작업 기간 밖·학년 행사 제외 수업은 교체할 수 없습니다. 조회 모드에서는 확인할 수 있습니다."; return; }
         vm.Select(id);
         targetCell = null; fixedTargetSlotId = null; boardAction = BoardAction.Normal; swapCandidates.Clear();
         PaintPlan(); UpdateWorkflowControls();
@@ -323,6 +321,7 @@ public partial class MainWindow
     {
         if (workMode == WorkMode.Manual && manualDraft is not null) { ManualCell(cell); return; }
         if (workMode != WorkMode.Auto || vm.Session is null || vm.SelectedLessonId is not { } id) return;
+        if (!EditableSlot(cell.SlotId)) { ActionHint.Text = "이 시간은 작업 기간 밖입니다. 작업 기간을 늘린 뒤 목적을 선택하세요. 오늘 이전은 조회만 가능합니다."; return; }
         if (!AllowedTarget(id, cell)) { ActionHint.Text = "같은 학급의 칸 또는 같은 교사 행의 목적 시간을 지정하세요."; return; }
         targetCell = cell; fixedTargetSlotId = cell.SlotId;
         vm.CancelPreview(); PaintPlan();
@@ -432,13 +431,13 @@ public partial class MainWindow
         if (vm.SelectedLessonId is not { } id)
         { ActionHint.Text = "교체할 수업을 먼저 선택하세요. 목적 칸은 생략할 수 있습니다."; return; }
         if (!EditableSlot(vm.Session.Document.Current.Lessons.Single(x => x.Id == id).SlotId))
-        { ActionHint.Text = "날짜 설정을 확인하세요. 편집 허용 시작일 이전 수업은 교체할 수 없습니다."; return; }
+        { ActionHint.Text = "오늘 이전과 선택한 작업 기간 밖의 수업은 교체할 수 없습니다."; return; }
         var session = vm.Session; var revision = session.Revision;
         var source = session.Document.Current.Lessons.Single(x => x.Id == id);
         if (source.Locked || source.TeacherId is null || new SchoolDayRules(session.Document).IsExcluded(source))
         { ActionHint.Text = "잠금·교사 미배정·행사 제외 수업은 자동 이동할 수 없습니다."; return; }
         var target = fixedTargetSlotId; var direction = Direction;
-        var scope = MonthlyTimetable.WorkingSlots(session.Document).Select(x => x.Id).ToHashSet();
+        var scope = WorkPeriod.EditableSlots(session.Document).Select(x => x.Id).ToHashSet();
         rechangeReview.Reset(); automaticApproval.Reset(); teacherDayPlan = null; teacherDayReviewDetail = null;
         var requested = new HashSet<string> { id };
         var restrictions = new AutomaticSearchRestrictions();
@@ -511,7 +510,7 @@ public partial class MainWindow
     {
         if (busy || !ModeAllows(vm.Pending) || !vm.CanApply) return;
         if (!CalendarReady)
-        { ActionHint.Text = "먼저 1주 시작일과 편집 허용 시작일을 지정하세요."; return; }
+        { ActionHint.Text = "날짜가 바뀌었습니다. 초안을 취소한 뒤 작업 기간을 다시 선택하세요."; return; }
         var plan = vm.Pending!;
         var followUp = ReferenceEquals(plan, teacherDayPlan) ? teacherDayReviewDetail : null;
         if (manualDraft is { } draft && plan.Changes.Any(x => !draft.AllowsDate(x.Before.SlotId) || !draft.AllowsDate(x.After.SlotId)))
@@ -520,8 +519,6 @@ public partial class MainWindow
         { ActionHint.Text = "이 교체안의 이동 허용을 다시 확인해야 합니다. 자동 교체안을 다시 찾으세요."; return; }
         if (workMode == WorkMode.Manual && !ConfirmRechanges(plan.Changes.Select(x => x.Before.Id), plan)) return;
         if (!ConfirmConsecutivePlan(plan)) return;
-        var monthWarning = MonthWarning(plan);
-        if (workMode != WorkMode.Swap && monthWarning.Length > 0 && MessageBox.Show(this, monthWarning.Trim() + "\n\n이 교체안을 적용할까요?", "월 경계 교체 확인", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         if (busy || !ReferenceEquals(vm.Pending, plan) || !vm.CanApply || !vm.Apply()) return;
         manualDraft = null; rechangeReview.Reset(); automaticApproval.Reset(); teacherDayPlan = null; teacherDayReviewDetail = null; placementAdvice.Clear(); boardAction = BoardAction.Normal;
         consecutiveApprovedPlan = null; consecutiveApprovedSession = null;

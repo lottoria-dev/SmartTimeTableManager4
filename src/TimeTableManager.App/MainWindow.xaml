@@ -6,7 +6,6 @@
   <Style TargetType="Button" BasedOn="{StaticResource AquaButton}"><Setter Property="Padding" Value="8,1"/><Setter Property="Margin" Value="0,1,4,1"/><Setter Property="MinHeight" Value="24"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
   <Style TargetType="ComboBox" BasedOn="{StaticResource AquaComboBox}"><Setter Property="MinHeight" Value="25"/><Setter Property="Margin" Value="0,1,6,1"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
   <Style TargetType="TextBox" BasedOn="{StaticResource AquaTextBox}"><Setter Property="Padding" Value="4,1"/><Setter Property="FontSize" Value="12"/><Setter Property="MinHeight" Value="25"/><Setter Property="Margin" Value="0,1,6,1"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
-  <Style TargetType="DatePicker"><Setter Property="Height" Value="30"/><Setter Property="Margin" Value="0"/><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
  </Window.Resources>
  <DockPanel Margin="8">
   <Border DockPanel.Dock="Top" Background="{StaticResource AquaGlass}" BorderBrush="{StaticResource AquaEdge}" BorderThickness="1" CornerRadius="10" Padding="7,4,7,3" Margin="0,0,0,5">
@@ -18,7 +17,6 @@
     <Menu x:Name="FileTools" VerticalAlignment="Center" Background="Transparent">
      <MenuItem Header="파일">
       <MenuItem Header="시간표 파일 열기…" Click="OpenClick" InputGestureText="Ctrl+O" ToolTip="Excel·CSV는 기초 시간표, .ttm은 저장한 작업을 이어서 엽니다."/>
-      <MenuItem Header="관리 월 선택·변경…" Click="MonthClick"/>
       <MenuItem Header="작업 저장" Click="SaveClick" InputGestureText="Ctrl+S"/>
       <MenuItem Header="다른 이름으로 작업 저장…" Click="SaveAsClick"/>
       <Separator/><MenuItem Header="배정 결과 Excel·CSV 내보내기…" Click="ExportClick"/>
@@ -40,13 +38,16 @@
       <MenuItem Header="현재 보이는 전체 수업 잠금" Click="LockVisibleClick"/>
       <MenuItem Header="현재 보이는 전체 수업 잠금 해제" Click="UnlockVisibleClick"/>
      </MenuItem>
-     <MenuItem Header="월별 통계" Click="MonthlyStatisticsClick"/>
+     <MenuItem Header="보기">
+      <MenuItem Header="작업 기간 보기" Click="WorkPeriodViewClick"/>
+      <MenuItem Header="이번 달 전체 조회" Click="CurrentMonthViewClick"/>
+      <MenuItem Header="다른 월 전체 조회…" Click="MonthClick"/>
+     </MenuItem>
      <MenuItem Header="옵션">
       <MenuItem x:Name="ExclusionsMenu" Header="날짜별 학년 행사 제외…" Click="ExclusionsClick"/>
       <Separator/>
       <MenuItem x:Name="AutoPreview" Header="교체안 확인 창 자동 열기" IsCheckable="True" IsChecked="True"/>
       <MenuItem x:Name="ShowHints" Header="수동 연쇄 추천 음영 표시" IsCheckable="True" IsChecked="True" Click="HintsChanged"/>
-      <MenuItem Header="날짜 설정 펼치기/접기" Click="CalendarToggleClick"/>
      </MenuItem>
     </Menu>
     <Menu VerticalAlignment="Center">
@@ -74,7 +75,7 @@
     <Grid.ColumnDefinitions><ColumnDefinition x:Name="ToolbarLeft" Width="3*"/><ColumnDefinition x:Name="ToolbarRight" Width="2*"/></Grid.ColumnDefinitions>
    <WrapPanel x:Name="BoardTools" Grid.Row="0" Grid.Column="0" Margin="0,0,8,3">
     <ComboBox x:Name="ViewMode" Width="96" SelectionChanged="FilterChanged"><ComboBoxItem Content="교사 전체"/><ComboBoxItem Content="학급 전체"/></ComboBox>
-    <ComboBox x:Name="WeekFilter" Width="150" DisplayMemberPath="Label" SelectionChanged="FilterChanged"/>
+    <ComboBox x:Name="WeekFilter" Width="165" DisplayMemberPath="Label" SelectionChanged="FilterChanged" ToolTip="작업 기간 또는 한 달 전체를 조회합니다. 조회 범위를 바꾸어도 편집 가능한 기간은 그대로입니다."/>
     <ComboBox x:Name="DayFilter" Width="90" SelectionChanged="FilterChanged" DisplayMemberPath="Label"/>
     <TextBlock Text="찾기 " VerticalAlignment="Center"/><TextBox x:Name="SearchBox" Width="115" TextChanged="SearchChanged" ToolTip="교사·학급·과목. 입력 후 잠시 멈추면 강조합니다."/>
     <Slider x:Name="Zoom" Minimum="0.7" Maximum="1.8" Value="1" Width="70" Margin="4,0,8,0" VerticalAlignment="Center" ValueChanged="ZoomChanged"/>
@@ -85,7 +86,7 @@
    <WrapPanel x:Name="ModeActions" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">
     <CheckBox x:Name="ChangedRowsOnly" Content="변경된 행만 보기" Margin="4,0,12,0" VerticalAlignment="Center" Click="ChangedRowsClick"/>
     <Button x:Name="LockRangeButton" Content="다중 잠금" Click="ToggleLockSelectionClick"/>
-    <WrapPanel x:Name="AutoOptionsPanel" MaxWidth="{Binding ActualWidth, ElementName=ModeActions}" Visibility="Collapsed" ToolTip="처음 선택한 수업 날짜가 기준입니다. 예: 수요일 수업은 당일 우선 → 이전 허용 시 화요일, 이후 허용 시 목요일까지 검토. 오늘 날짜와는 별개입니다. 편집 허용 시작일 이전은 제외합니다.">
+    <WrapPanel x:Name="AutoOptionsPanel" MaxWidth="{Binding ActualWidth, ElementName=ModeActions}" Visibility="Collapsed" ToolTip="처음 선택한 수업 날짜가 기준입니다. 당일 우선으로 검토하고, 허용한 이전·이후 날짜로 넓힙니다. 오늘 이전과 선택한 작업 기간 밖은 제외합니다.">
      <TextBlock x:Name="DateDirectionHint" Text="당일 우선 · 추가 허용: " VerticalAlignment="Center" Margin="0,0,6,0"/>
      <CheckBox x:Name="AllowEarlier" Content="이전 날짜 허용" Margin="0,0,12,0" VerticalAlignment="Center" Click="DirectionChanged"/>
      <CheckBox x:Name="AllowLater" Content="이후 날짜 허용" IsChecked="False" Margin="0,0,12,0" VerticalAlignment="Center" Click="DirectionChanged"/>
@@ -107,15 +108,12 @@
      </Grid>
     </Border>
    </Grid>
-   <Expander x:Name="CalendarPanel" IsExpanded="False" Margin="0,0,0,2">
-    <Expander.Header><StackPanel Orientation="Horizontal"><TextBlock x:Name="CalendarHint" Text="날짜 설정 · 1주 시작일과 편집 허용 시작일" Foreground="#475569"/><TextBlock Text="{Binding Status}" Margin="18,0,0,0" Foreground="#64748B" FontSize="10" VerticalAlignment="Center" ToolTip="{Binding Status}"/></StackPanel></Expander.Header>
-    <WrapPanel x:Name="CalendarTools" Margin="4,3,0,3">
-     <Button Content="관리 월 변경" Click="MonthClick"/>
-     <TextBlock Text="1주 시작(월) " VerticalAlignment="Center"/><DatePicker x:Name="FirstWeekDate" Width="130" SelectedDateFormat="Short" SelectedDateChanged="CalendarChanged"/>
-     <TextBlock Text="편집 허용 시작일 " Margin="12,0,0,0" VerticalAlignment="Center"/><DatePicker x:Name="WorkDate" ToolTip="이 날짜보다 앞선 수업의 편집을 막습니다. AI의 이전·이후 날짜는 선택 수업 날짜를 기준으로 판단합니다. 과거 날짜도 검토하려면 이 시작일을 앞당기세요." Width="130" SelectedDateFormat="Short" SelectedDateChanged="CalendarChanged"/>
-     <Button Content="오늘" Margin="8,0,6,0" Click="TodayClick"/><Button x:Name="RepeatTwoWeeks" Content="2주 반복본 만들기" Margin="0" Click="RepeatTwoWeeksClick"/>
-    </WrapPanel>
-   </Expander>
+   <WrapPanel x:Name="CalendarTools" Margin="3,1,0,1">
+    <TextBlock Text="작업 기간 " VerticalAlignment="Center" FontWeight="SemiBold"/>
+    <ComboBox x:Name="WorkHorizon" Width="215" DisplayMemberPath="Label" SelectionChanged="WorkHorizonChanged" ToolTip="오늘부터 이번 주 또는 1·2·3주 후 금요일까지 작업합니다. 다음 달도 자동으로 이어집니다."/>
+    <TextBlock x:Name="CalendarHint" Text="시간표를 열면 오늘 기준으로 시작합니다." Foreground="#475569" VerticalAlignment="Center" Margin="3,0,12,0"/>
+    <TextBlock Text="{Binding Status}" Foreground="#64748B" FontSize="10" VerticalAlignment="Center" ToolTip="{Binding Status}"/>
+   </WrapPanel>
    <StackPanel x:Name="BasketPanel" Height="78" Visibility="Collapsed" Margin="0,0,0,4">
     <TextBlock x:Name="BasketHint" FontWeight="SemiBold"/>
     <ListBox x:Name="BasketList" DisplayMemberPath="Label" SelectionChanged="BasketSelectionChanged" PreviewMouseLeftButtonDown="BasketMouseDown" MaxHeight="62" ScrollViewer.HorizontalScrollBarVisibility="Auto">

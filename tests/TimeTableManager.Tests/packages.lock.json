@@ -117,7 +117,7 @@
       "timetablemanager.application": {
         "type": "Project",
         "dependencies": {
-          "TimeTableManager.Domain": "[4.0.3, )"
+          "TimeTableManager.Domain": "[4.1.0, )"
         }
       },
       "timetablemanager.domain": {
@@ -129,7 +129,7 @@
           "ClosedXML": "[0.105.0, )",
           "Microsoft.Data.Sqlite": "[10.0.0, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
-          "TimeTableManager.Application": "[4.0.3, )"
+          "TimeTableManager.Application": "[4.1.0, )"
         }
       }
     }

@@ -4,12 +4,6 @@ namespace TimeTableManager.Infrastructure;
 
 public static class TimestampedFileNames
 {
-    public static string ForMonth(string path, DateOnly month)
-    {
-        var stem = Regex.Replace(Path.GetFileNameWithoutExtension(path), @"_\d{8}_\d{6}(?:_\d+)?$", "", RegexOptions.CultureInvariant);
-        stem = Regex.Replace(stem, @"_\d{4}-\d{2}$", "", RegexOptions.CultureInvariant);
-        return Path.Combine(Path.GetDirectoryName(path) ?? "", $"{stem}_{month:yyyy-MM}{Path.GetExtension(path)}");
-    }
     public static string Stamp(string path, DateTime localTime)
     {
         var directory = Path.GetDirectoryName(path) ?? "";

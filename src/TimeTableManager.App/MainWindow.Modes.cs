@@ -88,7 +88,7 @@ public partial class MainWindow
         if (!validation.IsValid) { ActionHint.Text = string.Join(" ", validation.Issues.Select(x => x.Message)); return; }
         var first = session.Document.Current.Lessons.Single(x => x.Id == firstId);
         var second = session.Document.Current.Lessons.Single(x => x.Id == secondId);
-        var message = vm.Describe(first) + "\n\n↕ 1대1 맞교환\n\n" + vm.Describe(second) + MonthWarning(plan) + "\n\n두 수업의 시간을 교환할까요?";
+        var message = vm.Describe(first) + "\n\n↕ 1대1 맞교환\n\n" + vm.Describe(second) + "\n\n두 수업의 시간을 교환할까요?";
         if (MessageBox.Show(this, message, "맞교환 확인", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         if (!ReferenceEquals(vm.Session, session) || plan.Revision != session.Revision) { ActionHint.Text = "시간표가 바뀌었습니다. 다시 선택하세요."; return; }
         vm.ShowPlan(plan); ApplyClick(this, new RoutedEventArgs());
@@ -108,7 +108,7 @@ public partial class MainWindow
     {
         if (busy || dragActive || vm.Session is not { } session) return;
         var revision = session.Revision;
-        if (MessageBox.Show(this, "저장된 모든 월의 교체·보강 이력을 지우고 현재 기초 배정으로 돌아갈까요?\n학교 계획으로 적용한 기초 요일·날짜·학년 행사 설정은 유지합니다.\n초기화 후 Ctrl+Z로 복원할 수 없습니다.",
+        if (MessageBox.Show(this, "이 작업 파일의 모든 교체·보강 이력을 지우고 현재 기초 배정으로 돌아갈까요?\n학교 계획으로 적용한 기초 요일·날짜·학년 행사 설정은 유지합니다.\n초기화 후 Ctrl+Z로 복원할 수 없습니다.",
             "전체 초기화", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         if (!ReferenceEquals(vm.Session, session) || session.Revision != revision) return;
         CancelInteraction(); session.ResetToBaseline(); vm.Attach(session);

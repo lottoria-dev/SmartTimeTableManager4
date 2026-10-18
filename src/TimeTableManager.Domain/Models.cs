@@ -36,12 +36,15 @@ public sealed record ChangePlan(Guid Revision, ChangeKind Kind, string Descripti
     DayTemplateChange? DayTemplate = null);
 public sealed record Operation(Guid BeforeStateId, Guid AfterStateId, DateTimeOffset At, ChangeKind Kind,
     string Description, ImmutableArray<LessonDelta> Changes, DayTemplateChange? DayTemplate = null);
-public sealed record ScheduleCalendar(DateOnly FirstWeekMonday, DateOnly EditableFrom)
+public sealed record ScheduleCalendar(DateOnly FirstWeekMonday, DateOnly EditableFrom,
+    DateOnly? EditableUntil = null, int WeeksAhead = 1)
 {
     public static DateOnly MondayOf(DateOnly date) => date.AddDays(-(((int)date.DayOfWeek + 6) % 7));
     public DateOnly DateOf(TimeSlot slot) => FirstWeekMonday.AddDays((slot.Week - 1) * 7 + slot.Day - 1);
-    public DateOnly DisplayUntil => MondayOf(EditableFrom).AddDays(11);
-    public bool CanEdit(TimeSlot slot) => DateOf(slot) >= EditableFrom;
+    public DateOnly DisplayUntil => EditableUntil ?? MondayOf(EditableFrom).AddDays(11);
+    public bool CanEdit(DateOnly date) => date.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday) &&
+        date >= EditableFrom && (EditableUntil is null || date <= EditableUntil);
+    public bool CanEdit(TimeSlot slot) => CanEdit(DateOf(slot));
     public string Label(TimeSlot slot) => $"{DateOf(slot):M/d} ({"월화수목금토일"[slot.Day - 1]}) {slot.Period}교시";
 }
 public sealed record BaseDayPlan(DateOnly Date, int SourceDay, int Periods);

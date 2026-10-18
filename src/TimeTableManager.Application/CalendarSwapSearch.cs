@@ -34,9 +34,8 @@ public static class CalendarSwapSearch
         var school = new SchoolDayRules(session.Document);
         if (source.Locked || school.IsExcluded(source)) return new(null, "선택 수업은 잠금·행사 제외 수업입니다.", 0);
         var scope = state.Slots.Where(x => visible.Contains(x.Id) && Allows(calendar, origin, x, direction)).Select(x => x.Id).ToHashSet();
-        if (!scope.Contains(origin.Id)) return new(null, "선택 수업이 편집 허용 시작일 이전이거나 탐색 범위 밖입니다.", 0);
+        if (!scope.Contains(origin.Id)) return new(null, "선택 수업이 오늘 이전이거나 작업 기간 밖입니다.", 0);
         var originDate = calendar.DateOf(origin);
-        var preferredMonth = session.Document.Monthly?.Month ?? MonthlyTimetable.MonthOf(originDate);
         var candidates = state.Slots.Where(x => scope.Contains(x.Id) && x.Id != origin.Id && !school.IsExcluded(source.ClassId, x.Id) &&
                 (!otherDaysOnly || calendar.DateOf(x) != originDate))
             .OrderBy(x => calendar.DateOf(x) == originDate ? 0 : 1)
@@ -45,7 +44,7 @@ public static class CalendarSwapSearch
         if (targetId is not null)
         {
             candidates = candidates.Where(x => x.Id == targetId).ToArray();
-            if (candidates.Length == 0) return new(null, "지정 목적은 날짜 허용·편집 허용 시작일·행사 제외·탐색 범위 조건에 맞지 않습니다. 목적을 유지합니다.", 0);
+            if (candidates.Length == 0) return new(null, "지정 목적은 날짜 허용·작업 기간·행사 제외 조건에 맞지 않습니다. 목적을 유지합니다.", 0);
         }
         var stages = new List<(string Name, HashSet<string> Scope)>();
         void AddStage(string name, Func<TimeSlot, bool> filter)
@@ -59,7 +58,7 @@ public static class CalendarSwapSearch
         {
             foreach (int radius in new[]{1,2,3})
                 AddStage($"선택 날짜 앞뒤 {radius}일의 허용 날짜에서", x => Math.Abs(calendar.DateOf(x).DayNumber-originDate.DayNumber) <= radius);
-            AddStage("같은 달의 허용 날짜에서", x => MonthlyTimetable.InMonth(calendar.DateOf(x), preferredMonth));
+            AddStage("선택 날짜 앞뒤 1주의 허용 날짜에서", x => Math.Abs(calendar.DateOf(x).DayNumber-originDate.DayNumber) <= 7);
             AddStage("허용한 이전·이후 날짜까지 범위를 넓혀", _ => true);
         }
         int examined = 0;
@@ -73,8 +72,7 @@ public static class CalendarSwapSearch
             int used = 0;
             bool Fits(ChangePlan plan) => plan.Changes.All(x => immovable?.Contains(x.Before.Id) != true && stage.Scope.Contains(x.Before.SlotId) && stage.Scope.Contains(x.After.SlotId)) &&
                 (targetId is null || plan.Changes.Any(x => x.Before.Id == sourceId && x.After.SlotId == targetId));
-            SwapSearchResult Found(ChangePlan plan) => new(plan, targetNotice + stage.Name + " 교체안을 찾았습니다." +
-                (MonthlyTimetable.CrossesMonth(session.Document, plan) ? " 월 경계 이동이 포함됩니다. 출발·도착 월의 통계를 함께 확인하세요." : " 전후를 확인하고 적용하세요."), examined);
+            SwapSearchResult Found(ChangePlan plan) => new(plan, targetNotice + stage.Name + " 교체안을 찾았습니다. 전후를 확인하고 적용하세요.", examined);
             try
             {
                 // Even after widening helper dates, try same-day destinations (including chains) first.

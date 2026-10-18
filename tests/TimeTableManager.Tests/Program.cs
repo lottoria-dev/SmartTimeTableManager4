@@ -664,26 +664,20 @@ Test("R1101", "윤년·연말을 포함한 월 생성은 날짜 중복 없이 �
         Check(again.Monthly!.CoverageId == next.Monthly!.CoverageId && again.SchemaVersion == 3);
     }
 });
-Test("R1102", "9월 출발·10월 도착 및 보강을 월별로 구분하고 다음 월 저장·재열기에도 한 번 집계", () => {
+Test("R1102", "월 경계 이동·보강은 저장·재열기와 Undo/Redo 후에도 수업·이력 보존", () => {
     var session = new ProjectSession(MonthlyTimetable.EnsureMonth(ProjectDocument.Create("월 시험",MonthlyFixture()),new(2026,9,1)));
     var from = DatedSlot(session.Document,new(2026,9,30),1); var to = DatedSlot(session.Document,new(2026,10,1),2);
     var id = session.Document.Current.Lessons.Single(x => x.SlotId == from).Id;
     Check(session.Apply(ChangePlanner.Move(session,id,to)).IsValid);
     Check(session.Apply(ChangePlanner.AssignTeacher(session,id,"b")).IsValid);
-    var sept = MonthlyStatistics.Create(session.Document,new(2026,9,1)); var a = sept.Teachers.Single(x => x.TeacherId == "a");
-    Check(a.MoveOut == 1 && a.MoveIn == 0 && a.CoverOut == 0 && a.Assigned == a.Planned - 1);
-    Check(sept.Changes.Single().CrossMonth);
     session.SelectMonth(new(2026,10,1));
-    var oct = MonthlyStatistics.Create(session.Document,new(2026,10,1)); a = oct.Teachers.Single(x => x.TeacherId == "a");
-    var b = oct.Teachers.Single(x => x.TeacherId == "b");
-    Check(a.MoveIn == 1 && a.CoverOut == 1 && a.Assigned == a.Planned && b.CoverIn == 1 && b.Assigned == 1);
-    Check(oct.Teachers.All(x => x.Balanced) && oct.Changes.Count == 1 && session.Document.HistoryCursor == 2);
+    Check(session.Document.HistoryCursor == 2 && session.Document.Current.Lessons.Single(x => x.Id == id) is { TeacherId: "b" } current && current.SlotId == to);
     var path = Path.Combine(temporary,"r11-month.ttm"); ProjectRepository.WriteAtomic(path,session.Document);
     var loaded = new ProjectSession(ProjectRepository.Read(path)); Check(Json(loaded.Document) == Json(session.Document));
-    Check(loaded.Undo()); Check(MonthlyStatistics.Create(loaded.Document,new(2026,10,1)).Teachers.All(x => x.CoverIn == 0));
-    Check(loaded.Undo()); Check(MonthlyStatistics.Create(loaded.Document,new(2026,9,1)).Changes.Count == 0);
+    Check(loaded.Undo() && loaded.Document.Current.Lessons.Single(x => x.Id == id).TeacherId == "a");
+    Check(loaded.Undo() && ChangeHistory.NetChanges(loaded.Document).IsEmpty);
     Check(loaded.Redo() && loaded.Redo());
-    loaded.SelectMonth(new(2026,9,1)); Check(MonthlyStatistics.Create(loaded.Document,new(2026,9,1)).Teachers.Single(x => x.TeacherId == "a").MoveOut == 1);
+    loaded.SelectMonth(new(2026,9,1)); Check(loaded.Document.Current.Lessons.Single(x => x.Id == id).SlotId == to);
 });
 Test("R1103", "월 왕복 확장·행사 설정의 저장 상태와 형식 버전 유지, 날짜 재해석 차단", () => {
     var session = new ProjectSession(MonthlyTimetable.EnsureMonth(ProjectDocument.Create("월 시험",MonthlyFixture()),new(2026,9,1)),true);
@@ -713,7 +707,7 @@ Test("R1104", "당일 연쇄가 다음 날짜의 직접 이동보다 우선", ()
     var slots = state.Slots.ToDictionary(x => x.Id);
     Check(result.Plan!.Changes.Length >= 3 && result.Plan.Changes.All(x => slots[x.Before.SlotId].Day == 1 && slots[x.After.SlotId].Day == 1));
 });
-Test("R1105", "당일 해가 없으면 보조 수업만 다른 날짜로 확장하며 같은 달을 먼저 사용", () => {
+Test("R1105", "당일 해가 없으면 허용 방향의 가까운 날짜로 보조 수업 확장", () => {
     var state = new ScheduleState([new("a","A"),new("b","B"),new("c","C")], [new("c1","1-1"),new("c2","1-2")],
         [new("from",1,3,1),new("to",1,3,2),new("earlier",1,2,1),new("next-month",1,4,1)],
         [new("source","c1","수학","a","from"),new("other","c1","국어","b","to"),new("conflict","c2","수학","b","from"),new("fixed","c2","과학","c","to",Locked:true)], []);
@@ -726,19 +720,17 @@ Test("R1105", "당일 해가 없으면 보조 수업만 다른 날짜로 확장�
     Check(later.Plan is not null && later.Plan.Changes.Single(x => x.Before.Id == "source").After.SlotId == "to" && later.Plan.Changes.Any(x => x.After.SlotId == "next-month"),later.Message);
     Check(MonthlyTimetable.CrossesMonth(session.Document,later.Plan!));
 });
-Test("R1106", "반복 담당 교체·잠금·원상복귀는 통계 중복 없음, 인접 월은 수동 배치 가능하되 추천 제외", () => {
+Test("R1106", "담당 교체 원상복귀·잠금 유지, 다음 달의 빈 시간도 동일 조건으로 추천", () => {
     var session = new ProjectSession(MonthlyTimetable.EnsureMonth(ProjectDocument.Create("월 시험",MonthlyFixture()),new(2026,9,1)));
     var id = session.Document.Current.Lessons.Single(x => x.SlotId == DatedSlot(session.Document,new(2026,9,30),1)).Id;
     Check(session.Apply(ChangePlanner.AssignTeacher(session,id,"b")).IsValid && session.Apply(ChangePlanner.AssignTeacher(session,id,"c")).IsValid);
-    var report = MonthlyStatistics.Create(session.Document,new(2026,9,1));
-    Check(report.Changes.Count == 1 && report.Teachers.Sum(x => x.CoverOut) == 1 && report.Teachers.Sum(x => x.CoverIn) == 1 && report.Teachers.Single(x => x.TeacherId == "b").CoverIn == 0);
+    Check(ChangeHistory.NetChanges(session.Document).Length == 1);
     Check(session.Apply(ChangePlanner.AssignTeacher(session,id,"a")).IsValid && session.Apply(ChangePlanner.ToggleLock(session,id)).IsValid);
-    Check(MonthlyStatistics.Create(session.Document,new(2026,9,1)).Changes.Count == 0);
+    Check(ChangeHistory.NetChanges(session.Document).IsEmpty);
     Check(session.Apply(ChangePlanner.ToggleLock(session,id)).IsValid);
     var draft = new ManualChainDraft(session); Check(draft.Take(id) is null);
     Check(draft.Advice(DatedSlot(session.Document,new(2026,9,30),2)).Recommended);
-    var advice = draft.Advice(DatedSlot(session.Document,new(2026,10,1),2)); Check(advice.Allowed && !advice.Recommended);
-    Check(Path.GetFileName(TimestampedFileNames.ForMonth("시간표_2026-09_20260930_120000.ttm",new(2026,10,1))) == "시간표_2026-10.ttm");
+    Check(draft.Advice(DatedSlot(session.Document,new(2026,10,1),2)).Recommended);
 });
 
 // r12: 조회 날짜·출력 자료형·대기 선택/참여 순서 회귀 소스. Windows에서 실행할 항목이며 여기서는 미실행.
@@ -769,21 +761,7 @@ Test("R1202", "CSV 학급 보호·재읽기, Excel 텍스트 셀, 외부 교사�
     Check(sheet.Cell(2,1).DataType == XLDataType.Text && sheet.Cell(2,1).GetString() == "1-1" && !sheet.Cell(2,1).HasFormula);
     Check(sheet.Cell(2,5).GetString() == "=1+1" && !sheet.Cell(2,5).HasFormula && sheet.Cell(2,7).GetString() == "교사A");
 });
-Test("R1203", "월 통계 출력 열 간소화와 월 경계 학급 보호, 내부 계산 보존", () => {
-    var total = new MonthlyTeacherTotal("name:교사A","교사A",2,1,0,1,0,0);
-    var report = new MonthlyReport(new(2026,9,1), [total],
-        [new("lesson","1-1","수학","교사A","교사B","2026-09-30 1교시","2026-10-01 2교시","내부 집계 설명",true)]);
-    Check(total.Balanced && total.TeacherId == "name:교사A");
-    var path = Path.Combine(temporary,"r12-statistics.csv"); MonthlyReportExporter.Write(path,report,false);
-    var table = TabularReader.Read(path)[0];
-    Check(table.Rows[0].Length == 7 && !table.Rows[0].Contains("교사ID") && !table.Rows[0].Contains("이동출발") && !table.Rows[0].Contains("이동도착"));
-    Check(table.Cell(1,1) == "교사A" && table.Cell(1,6) == "-2");
-    MonthlyReportExporter.Write(path,report,true); table = TabularReader.Read(path)[0];
-    Check(table.Rows[0].Length == 9 && !table.Rows[0].Contains("통계귀속") && table.Cell(1,2) == "=\"1-1\"");
-    var xlsx = Path.Combine(temporary,"r12-statistics.xlsx"); MonthlyReportExporter.Write(xlsx,report,false);
-    using var book = new XLWorkbook(xlsx);
-    Check(book.Worksheet(1).Cell(2,7).DataType == XLDataType.Number && book.Worksheet(1).Cell(2,7).GetDouble() == -2);
-});
+
 Test("R1204", "대기 카드 재클릭으로 배치가 끊기지 않고 참여 교사 순서를 중복 없이 유지", () => {
     var session = Session(); var before = Json(session.Document); var draft = new ManualChainDraft(session);
     Check(draft.Take("l1") is null); draft.Deselect(); Check(draft.ActiveId == "l1");
@@ -905,7 +883,7 @@ Test("V4A207", "하루 비우기는 이전·이후·양방향과 기존 다른 �
         Check(session.Document.HistoryCursor == 1 && session.Undo() && DocumentIntegrity.StateEquals(state,session.Document.Current));
     }
 });
-Test("V4A208", "월말 하루 이동은 인접 월만 가능할 때 이동·통계를 한 번 기록", () => {
+Test("V4A208", "월말 하루 이동은 다음 달로 이동 후 한 작업으로 복원", () => {
     var session = new ProjectSession(MonthlyTimetable.EnsureMonth(ProjectDocument.Create("월말 하루 이동",MonthlyFixture()),new(2026,9,1)));
     var before = Json(session.Document); var from = DatedSlot(session.Document,new(2026,9,30),1);
     var id = session.Document.Current.Lessons.Single(x => x.SlotId == from).Id;
@@ -915,8 +893,6 @@ Test("V4A208", "월말 하루 이동은 인접 월만 가능할 때 이동·통�
     Check(session.Apply(result.Plan!).IsValid && session.Document.HistoryCursor == 1);
     var after = session.Document.Current.Lessons.Single(x => x.Id == id);
     Check(session.Document.Calendar!.DateOf(session.Document.Current.Slots.Single(x => x.Id == after.SlotId)).Month == 10);
-    Check(MonthlyStatistics.Create(session.Document,new(2026,9,1)).Teachers.All(x => x.Balanced));
-    Check(MonthlyStatistics.Create(session.Document,new(2026,10,1)).Teachers.All(x => x.Balanced));
     Check(session.Undo() && ChangeHistory.NetChanges(session.Document).IsEmpty);
 });
 
@@ -1176,18 +1152,12 @@ Test("V4A703", "학교 계획·원본 패턴은 월 확장과 2주 반복에서 
     Check(copy.Current.Lessons.Where(x => copy.Current.Slots.Single(s => s.Id == x.SlotId) is { Week:2,Day:1 }).All(x => x.Subject.StartsWith("1요일")));
     DocumentIntegrity.EnsureValid(copy);
 });
-Test("V4A704", "기초 요일 자체는 월 통계 변동 제외, 이후 보강만 집계·엑셀 7열", () => {
+Test("V4A704", "기초 요일은 교체 이력 제외, 이후 보강만 변경 내역에 표시", () => {
     var session = TemplateSession(); Check(session.Apply(DayTemplatePlanner.Create(session,new(2026,9,14),4).Plan!).IsValid);
-    var report = MonthlyStatistics.Create(session.Document,new(2026,9,1));
-    Check(report.Changes.Count == 0 && report.Teachers.All(x => x.Planned == x.Assigned && x.Balanced));
+    Check(ChangeHistory.NetChanges(session.Document).IsEmpty);
     var added = session.Document.Current.Lessons.Single(x => session.Document.Current.Slots.Single(s => s.Id == x.SlotId) is { Day:1,Period:7 });
     Check(session.Apply(ChangePlanner.AssignTeacher(session,added.Id,"t1")).IsValid);
-    report = MonthlyStatistics.Create(session.Document,new(2026,9,1));
-    Check(report.Changes.Count == 1 && report.Teachers.Sum(x => x.CoverIn) == 1 && report.Teachers.Sum(x => x.CoverOut) == 1);
-    Check(report.Teachers.All(x => x.Balanced && x.TemplateIn == 0 && x.TemplateOut == 0));
-    var path = Path.Combine(temporary,"alpha7-statistics.xlsx"); MonthlyReportExporter.Write(path,report,false);
-    using var book = new XLWorkbook(path); Check(book.Worksheet(1).Row(1).CellsUsed().Count() == 7);
-    Check(!book.Worksheet(1).Row(1).CellsUsed().Select(x => x.GetString()).Any(x => x.Contains("교사ID") || x.Contains("요일변경")));
+    Check(ChangeHistory.NetChanges(session.Document).Length == 1 && session.Document.HistoryCursor == 1);
 });
 Test("V4A705", "기초 요일 잠금 승인은 이번 명령만, 같은 학급·교시 잠금 유지, 일반 이동 잠금 유지", () => {
     var session = TemplateSession(); Check(session.Apply(ChangePlanner.ToggleLock(session,"lesson1-1")).IsValid);
@@ -1439,6 +1409,8 @@ Test("P001", "확대 자료 60학급·120교사·4800수업 검증/저장/후보
     var path=Path.Combine(temporary,"large.ttm");watch.Restart();ProjectRepository.WriteAtomic(path,session.Document);metrics["save_4800_ms"]=watch.Elapsed.TotalMilliseconds;
     watch.Restart();Check(ProjectRepository.Read(path).Current.Lessons.Length==4800);metrics["load_4800_ms"]=watch.Elapsed.TotalMilliseconds;
 });
+
+WorkPeriodCases.Run(Test, Check);
 
 var output=args.Length>1?args[1]:Path.Combine(Environment.CurrentDirectory,"test-results.json");
 File.WriteAllText(output,JsonSerializer.Serialize(new { utc=DateTimeOffset.UtcNow,runtime=Environment.Version.ToString(),os=System.Runtime.InteropServices.RuntimeInformation.OSDescription,passed=results.Count(x=>x.Passed),failed=results.Count(x=>!x.Passed),metrics,tests=results },new JsonSerializerOptions{WriteIndented=true}));

@@ -17,7 +17,14 @@ public sealed class ProjectSession
     public bool IsDirty => SavedStateId != Document.CurrentStateId || savedSchema != Document.SchemaVersion || savedBaselineSlotCount != Document.Baseline.Slots.Length || savedCalendar != Document.Calendar || savedMonthly != Document.Monthly || !savedExclusions.SequenceEqual(SchoolDayRules.Entries(Document));
     public bool CanUndo => Document.HistoryCursor > 0 && HistoryAllowed(Document.History[Document.HistoryCursor - 1]);
     public bool CanRedo => Document.HistoryCursor < Document.History.Length && HistoryAllowed(Document.History[Document.HistoryCursor]);
-    private bool HistoryAllowed(Operation operation) => operation.Kind == ChangeKind.ToggleLock || operation.Changes.All(schoolRules.Allows);
+    private bool HistoryAllowed(Operation operation)
+    {
+        if (operation.Kind == ChangeKind.ToggleLock) return true;
+        if (!operation.Changes.All(schoolRules.Allows)) return false;
+        if (Document.SchemaVersion < 6 || Document.Calendar is not { } calendar) return true;
+        var slots = Document.Current.Slots.ToDictionary(x => x.Id);
+        return operation.Changes.All(x => calendar.CanEdit(slots[x.Before.SlotId]) && calendar.CanEdit(slots[x.After.SlotId]));
+    }
 
     public ProjectSession(ProjectDocument document, bool saved = false)
     {
@@ -42,8 +49,8 @@ public sealed class ProjectSession
             if (!content.IsValid) return content;
             if (!DayTemplatePlanner.MatchesPattern(Document, day) || !plan.Changes.SequenceEqual(DayTemplatePlanner.Difference(day.BeforeLessons, day.AfterLessons)))
                 return ValidationResult.Error("DAY_TEMPLATE", "요일 변경 미리보기 정보가 일치하지 않습니다.");
-            if (Document.Calendar is not { } dates || day.Date < dates.EditableFrom)
-                return ValidationResult.Error("PAST_DATE", "편집 허용 시작일 이전 날짜입니다.");
+            if (Document.Calendar is not { } dates || !dates.CanEdit(day.Date))
+                return ValidationResult.Error("WORK_PERIOD", "오늘 이전이거나 선택한 작업 기간 밖입니다.");
             if (day.BeforePeriods != DayTemplatePlanner.Periods(Document, day.Date))
                 return ValidationResult.Error("DAY_PERIODS", "해당 날짜의 교시 수가 변경되었습니다. 다시 선택하세요.");
             var extended = DayTemplatePlanner.Extend(Document.Current, day);
@@ -63,7 +70,7 @@ public sealed class ProjectSession
             var slots = Document.Current.Slots.ToDictionary(x => x.Id);
             if (plan.Changes.Any(x => slots.TryGetValue(x.Before.SlotId, out var before) && !calendar.CanEdit(before) ||
                 slots.TryGetValue(x.After.SlotId, out var after) && !calendar.CanEdit(after)))
-                return ValidationResult.Error("PAST_DATE", "편집 허용 시작일 이전 수업은 교체할 수 없습니다.");
+                return ValidationResult.Error("PAST_DATE", "오늘 이전이거나 선택한 작업 기간 밖의 수업은 교체할 수 없습니다.");
         }
         return ValidateChanges(Document.Current, plan.Kind, plan.Changes);
     }
@@ -174,9 +181,9 @@ public sealed class ProjectSession
     {
         DocumentIntegrity.ValidateCalendar(calendar);
         if (Document.Monthly is not null && calendar.FirstWeekMonday != Document.Calendar?.FirstWeekMonday)
-            throw new InvalidOperationException("월 관리 중에는 실제 날짜를 유지해야 합니다. 관리 월 변경을 이용하세요.");
+            throw new InvalidOperationException("기존 수업의 실제 날짜는 다시 해석할 수 없습니다. 조회할 월을 선택하세요.");
         if ((Document.History.Any(x => x.DayTemplate is not null) || Document.BaseDayPlans?.IsEmpty == false) && calendar.FirstWeekMonday != Document.Calendar?.FirstWeekMonday)
-            throw new InvalidOperationException("기초 요일을 적용한 뒤에는 날짜를 다시 해석할 수 없습니다. 관리 월 변경 또는 전체 초기화를 이용하세요.");
+            throw new InvalidOperationException("기초 요일을 적용한 뒤에는 수업의 실제 날짜를 다시 해석할 수 없습니다.");
         if (Document.Calendar == calendar) return;
         Document = Document with { Calendar = calendar };
         schoolRules = new SchoolDayRules(Document);
@@ -195,6 +202,16 @@ public sealed class ProjectSession
     public void SelectMonth(DateOnly month)
     {
         var next = MonthlyTimetable.EnsureMonth(Document, month);
+        Document = next; schoolRules = new SchoolDayRules(next); Revision = Guid.NewGuid();
+    }
+    public void SetWorkPeriod(DateOnly today, int weeksAhead)
+    {
+        var next = WorkPeriod.Prepare(Document, today, weeksAhead);
+        Document = next; schoolRules = new SchoolDayRules(next); Revision = Guid.NewGuid();
+    }
+    public void IncludeViewMonth(DateOnly month)
+    {
+        var next = WorkPeriod.IncludeMonth(Document, month);
         Document = next; schoolRules = new SchoolDayRules(next); Revision = Guid.NewGuid();
     }
     public void MarkSaved(Guid writtenStateId) { SavedStateId = writtenStateId; savedCalendar = Document.Calendar; savedExclusions = SchoolDayRules.Entries(Document); savedMonthly = Document.Monthly; savedSchema = Document.SchemaVersion; savedBaselineSlotCount = Document.Baseline.Slots.Length; }
@@ -242,12 +259,15 @@ public static class DocumentIntegrity
     public static void ValidateCalendar(ScheduleCalendar calendar)
     {
         if (calendar.FirstWeekMonday.DayOfWeek != DayOfWeek.Monday || calendar.FirstWeekMonday > DateOnly.MaxValue.AddDays(-27) ||
-            calendar.EditableFrom > DateOnly.MaxValue.AddDays(-13))
+            calendar.EditableFrom > DateOnly.MaxValue.AddDays(-27) || calendar.WeeksAhead is < 0 or > 3 ||
+            calendar.EditableUntil is { } end && end != BoardDateRange.Friday(calendar.EditableFrom, calendar.WeeksAhead))
             throw new InvalidDataException("1주 시작일은 월요일이어야 하며 날짜가 지원 범위를 벗어날 수 없습니다.");
     }
     public static void EnsureValid(ProjectDocument doc)
     {
-        if (doc.SchemaVersion is not (1 or 2 or 3 or 4 or 5)) throw new InvalidDataException("지원하지 않는 프로젝트 버전입니다.");
+        if (doc.SchemaVersion is not (1 or 2 or 3 or 4 or 5 or 6)) throw new InvalidDataException("지원하지 않는 프로젝트 버전입니다.");
+        if (doc.SchemaVersion >= 6 && (doc.Calendar?.EditableUntil is null || doc.Monthly is null))
+            throw new InvalidDataException("작업 기간 또는 반복 시간표 정보가 없습니다.");
         var result = ConstraintValidator.Validate(doc.Baseline);
         if (!result.IsValid) throw new InvalidDataException(string.Join("\n", result.Issues.Where(x => x.Severity == Severity.Error).Select(x => x.Message)));
         if (doc.History.IsDefault) throw new InvalidDataException("작업 이력이 없습니다.");
@@ -291,10 +311,10 @@ public static class DocumentIntegrity
             if (doc.Calendar is null || monthly.Month.Day != 1 || monthly.Month.Year is < 1901 or > 9998 ||
                 monthly.PatternMonday.DayOfWeek != DayOfWeek.Monday || monthly.CoverageId == Guid.Empty || monthly.Pattern is null ||
                 monthly.Pattern.Slots.IsDefaultOrEmpty || monthly.Pattern.Slots.Any(x => x.Week is < 1 or > 4) || !ConstraintValidator.Validate(monthly.Pattern).IsValid)
-                throw new InvalidDataException("월 관리 설정 또는 반복 기초 시간표가 손상되었습니다.");
+                throw new InvalidDataException("반복 기초 시간표 정보가 손상되었습니다.");
             var range = MonthlyTimetable.Window(monthly.Month);
-            if (doc.Baseline.Slots.IsDefaultOrEmpty || doc.Calendar.FirstWeekMonday > range.Start ||
-                doc.Calendar.FirstWeekMonday.AddDays((doc.Baseline.Slots.Max(x => x.Week) - 1) * 7) < ScheduleCalendar.MondayOf(range.End))
+            if (doc.Baseline.Slots.IsDefaultOrEmpty || doc.SchemaVersion < 6 && (doc.Calendar.FirstWeekMonday > range.Start ||
+                doc.Calendar.FirstWeekMonday.AddDays((doc.Baseline.Slots.Max(x => x.Week) - 1) * 7) < ScheduleCalendar.MondayOf(range.End)))
                 throw new InvalidDataException("관리 월과 인접 주의 시간표 범위가 부족합니다.");
         }
         if (!Guid.TryParseExact(doc.ProjectId, "N", out _) || string.IsNullOrWhiteSpace(doc.Name) || doc.InitialStateId == Guid.Empty || doc.History.IsDefault || doc.HistoryCursor < 0 || doc.HistoryCursor > doc.History.Length)

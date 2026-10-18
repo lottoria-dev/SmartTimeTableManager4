@@ -35,7 +35,7 @@ if (@($templateFiles | Where-Object Extension -eq '.xlsx').Count -ne 2 -or
 }
 $thirdParty = Join-Path $repoRoot 'third-party-licenses'
 if (-not (Test-Path -LiteralPath $thirdParty -PathType Container)) { throw 'Third-party license folder is missing.' }
-$output = Join-Path $repoRoot 'artifacts\release'
+$output = Join-Path $repoRoot 'artifacts\public'
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $zipPath = Join-Path $output "SmartTimeTableManager4-$version-win-x64.zip"
 $templateZipPath = Join-Path $output "SmartTimeTableManager4-$version-Templates.zip"
